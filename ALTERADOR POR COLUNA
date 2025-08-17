@@ -9,7 +9,7 @@ colunas_para_verificar = ['num_pasta','carteira', 'marca', 'estado', 'produto', 
 w = Window.partitionBy("cod_def").orderBy("data_alteracao") # ou w = Window.partitionBy("cod_def").orderBy(F.col("data_alteracao").desc())
 
 # Identificar primeira linha de cada grupo
-is_first = F.row_number().over(w) == 1
+is_first = F.row_number().over(w) == 1 # ou is_first = F.col("rn") == 1 se a coluna ja estiver criada 
 
 # Para cada coluna: 
 # - Se for a primeira linha -> verifica se está preenchida (not null)
@@ -53,7 +53,7 @@ colunas_para_verificar = ['num_pasta','carteira', 'marca', 'estado', 'produto', 
 
 w = Window.partitionBy("cod_def").orderBy("data_alteracao")  # ou desc()
 
-is_first = F.row_number().over(w) == 1
+is_first = F.row_number().over(w) == 1 # ou is_first = F.col("rn") == 1 se a coluna ja estiver criada 
 
 # Para cada coluna, gera 1 se considerada "alterada/preenchida", senão 0
 exprs_alteradas = []
