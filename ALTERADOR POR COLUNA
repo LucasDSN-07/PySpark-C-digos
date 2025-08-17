@@ -1,0 +1,79 @@
+#SCRIPT PARA GERAR CONTAGEM DE QUEM ALTEROU OS CAMPOS TRAZENDO TB O NOME DA COLUNA
+
+from pyspark.sql import functions as F
+from pyspark.sql import Window
+
+colunas_para_verificar = ['num_pasta','carteira', 'marca', 'estado', 'produto', 'agencia']
+
+# Janela por grupo ordenada pela data
+w = Window.partitionBy("cod_def").orderBy("data_alteracao") # ou w = Window.partitionBy("cod_def").orderBy(F.col("data_alteracao").desc())
+
+# Identificar primeira linha de cada grupo
+is_first = F.row_number().over(w) == 1
+
+# Para cada coluna: 
+# - Se for a primeira linha -> verifica se está preenchida (not null)
+# - Caso contrário -> compara com valor anterior
+exprs_alteradas = []
+for col in colunas_para_verificar:
+    exprs_alteradas.append(
+        F.when(is_first & F.col(col).isNotNull(), F.lit(col))  # primeira linha: conta col preenchida
+         .when(~is_first & (F.col(col) != F.lag(col).over(w)), F.lit(col))  # demais linhas: compara com anterior
+         .otherwise(F.lit(None))
+    )
+
+# Monta array com colunas alteradas
+df_resultado = (
+    df.withColumn("colunas_alteradas_array", F.array(*exprs_alteradas))
+      .withColumn("colunas_alteradas_array", F.expr("filter(colunas_alteradas_array, x -> x is not null)"))
+      .withColumn("qtd_colunas_alteradas", F.size(F.col("colunas_alteradas_array")))
+      .withColumn("colunas_alteradas", F.array_join(F.col("colunas_alteradas_array"), ", "))
+)
+
+# Seleção final
+df_resultado = df_resultado.select(
+    "cod_def",
+    "num_pasta",
+    "data_alteracao",
+    "nome_alterador",
+    "qtd_colunas_alteradas",
+    "colunas_alteradas"
+)
+
+df_resultado.show(20, truncate=False)
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# SCRIPT PARA GERAR A QUANTIDADE DE CAMPOS ALTERADAS POR LINHA 
+
+from pyspark.sql import functions as F
+from pyspark.sql import Window
+
+colunas_para_verificar = ['num_pasta','carteira', 'marca', 'estado', 'produto', 'agencia']
+
+w = Window.partitionBy("cod_def").orderBy("data_alteracao")  # ou desc()
+
+is_first = F.row_number().over(w) == 1
+
+# Para cada coluna, gera 1 se considerada "alterada/preenchida", senão 0
+exprs_alteradas = []
+for col in colunas_para_verificar:
+    exprs_alteradas.append(
+        F.when(is_first & F.col(col).isNotNull(), F.lit(1))   # primeira linha: conta preenchido
+         .when(~is_first & (F.col(col) != F.lag(col).over(w)), F.lit(1))  # demais linhas: compara com anterior
+         .otherwise(F.lit(0))
+    )
+
+# Soma total de alterações por linha
+df_resultado = df.withColumn("qtd_colunas_alteradas", sum(exprs_alteradas))
+
+# Seleção final
+df_resultado = df_resultado.select(
+    "cod_def",
+    "num_pasta",
+    "data_alteracao",
+    "nome_alterador",
+    "qtd_colunas_alteradas"
+)
+
+df_resultado.show(20, truncate=False)
