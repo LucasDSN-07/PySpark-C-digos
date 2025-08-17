@@ -77,3 +77,31 @@ df_resultado = df_resultado.select(
 )
 
 df_resultado.show(20, truncate=False)
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#SCRIPT PARA GERAR COLUNAS CONTANDO SE O ALTERADOR FOI ROBO OU MANUAL
+
+resultado = (
+    df_resultado
+    .groupBy("cod_def")
+    .agg(
+        F.sum(F.when(F.col("nome_alterador") == "EX3 Integrador", F.col("qtd_colunas_alteradas")).otherwise(0)).alias("automatica"),
+        F.sum(F.when(F.col("nome_alterador") != "EX3 Integrador", F.col("qtd_colunas_alteradas")).otherwise(0)).alias("manual")
+    )
+)
+
+# CRIA COLUNA COM O TOTAL PREENCHIDO
+resultado = resultado.select(
+    "cod_def",
+    "automatica",
+    (F.col("automatica") + F.col("manual")).alias("total_preenchido")  # <- aqui o alias
+)
+
+# CRIA COLUNA COM PERCENTUAL AUTOMATICO
+resultado = resultado.select(
+    "cod_def", 
+    "automatica", 
+    "total_preenchido",
+    F.round(F.col("automatica")/F.col("total_preenchido"),2).alias("percentual_automatica")
+    )
