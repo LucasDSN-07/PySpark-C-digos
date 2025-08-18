@@ -1,0 +1,139 @@
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+spark = SparkSession.builder.getOrCreate()
+
+# -----------------------------
+# 1️⃣ Carregar tabelas
+# -----------------------------
+df_def = spark.table("db_corp_juridico_esteiradofuturo_sor_01.iaas_salesforce_ettg_civl_received")
+df_cad = spark.table("db_corp_juridico_esteiradofuturo_sor_01.iaas_salesforce_cada_received")
+df_respostas = spark.table("db_corp_juridico_esteiradofuturo_sor_01.iaas_salesforce_rspa_qstr_received")
+
+# -----------------------------
+# 2️⃣ FLAG_AUTOMATIZADO
+# -----------------------------
+df_flag = df_def.join(df_cad, on="num_prso", how="left") \
+    .filter(
+        (F.to_date(F.substring("dat_entr_ettg_prso_juri",1,10),"dd/MM/yyyy") >= F.lit("2024-01-01")) &
+        (F.col("nom_crtr_prso_juri").isin('IC','Veículos Contra Cobrança','Serviços Bancários', 
+                                          'DCR PF CONTRA COBRANÇA', 'Fraudes e Ilícitos'))
+    ) \
+    .withColumn("flag_def_automatica", F.when(F.col("rspa_qstr_prso_juri")=="NDA", 1).otherwise(0))
+
+w_cad = Window.partitionBy("idt_unic_cada","num_prso").orderBy(F.col("dat_hor_ulti_alte_cada_prso_juri").desc())
+df_flag = df_flag.withColumn("rn_cad", F.row_number().over(w_cad))
+
+# -----------------------------
+# 3️⃣ PEDIDOS (UNNEST)
+# -----------------------------
+df_pedidos = df_flag.filter(F.col("rn_cad")==1) \
+    .withColumn("PEDIDO", F.explode("pedidos"))
+
+w_pedido = Window.partitionBy("nom_def_ettg_exto","PEDIDO.idt_unic_pedi") \
+                 .orderBy(F.col("PEDIDO.dat_hor_ulti_alte_cada_prso_juri").desc())
+
+df_pedidos = df_pedidos.withColumn("rn_pedido", F.row_number().over(w_pedido))
+
+# -----------------------------
+# 4️⃣ ULTIMOPEDIDO
+# -----------------------------
+w_ult = Window.partitionBy("idt_unic_cada").orderBy(
+    F.desc(F.coalesce("PEDIDO.ind_pedi_prin", F.lit(False))),
+    F.asc("rn_pedido")
+)
+
+df_ultimo_pedido = df_pedidos.withColumn("escolha_final", F.row_number().over(w_ult))
+
+# -----------------------------
+# 5️⃣ RANKEDPERGUNTAS (explode respostas e perguntas)
+# -----------------------------
+df_ranked = df_ultimo_pedido.filter((F.col("escolha_final")==1) & (F.col("flag_def_automatica")==0)) \
+    .withColumn("Resposta", F.explode("respostas")) \
+    .withColumn("Pergunta", F.explode("Resposta.perguntas"))
+
+w_perg = Window.partitionBy("nom_def_ettg_exto","Pergunta.nom_perg_qstr_ettg") \
+               .orderBy(F.col("Resposta.dat_hor_cria_rspa").desc())
+
+df_ranked = df_ranked.withColumn("rn_perguntas", F.row_number().over(w_perg))
+
+df_perguntas = df_ranked.filter(F.col("rn_perguntas")==1)
+
+# -----------------------------
+# 6️⃣ AUTOMATIZADO (regras)
+# -----------------------------
+df_automatizado = df_perguntas.withColumn(
+    "automatizado",
+    F.when(
+        (F.col("nom_crtr_prso_juri")=="IC") &
+        (F.col("nome_pergunta")=="O advogado de defesa está na lista de oportunistas/agressores?") &
+        (F.col("dt_entrada_estrategia") >= F.lit("2025-03-29")),
+        1
+    ).when(
+        (F.col("nom_crtr_prso_juri")=="IC") &
+        (F.col("nome_pergunta")=="O autor deseja devolver o valor do contrato?") &
+        (F.col("dt_entrada_estrategia") >= F.lit("2024-01-01")),
+        1
+    ).when(
+        (F.col("nom_crtr_prso_juri")=="IC") &
+        (F.col("nome_pergunta")=="O autor realizou depósito judicial no processo?") &
+        (F.col("dt_entrada_estrategia") >= F.lit("2024-01-01")),
+        1
+    ).when(
+        (F.col("nom_crtr_prso_juri")=="IC") &
+        (F.col("nome_pergunta")=="Temos laudo da inspetoria?") &
+        (F.col("dt_entrada_estrategia") >= F.lit("2024-01-01")),
+        1
+    ).when(
+        (F.col("nom_crtr_prso_juri")=="IC") &
+        (F.col("pedido")=="Contrato não reconhecido") &
+        (F.col("nome_pergunta").like("Cliente passou por tratamento pré processual sobre%")) &
+        (F.col("dt_entrada_estrategia") >= F.lit("2025-03-29")),
+        1
+    ).otherwise(0)
+)
+
+# -----------------------------
+# 7️⃣ PERCENTUAL
+# -----------------------------
+df_percentual = df_automatizado.groupBy(
+    "idt_unic_cada","idt_unic_caso","nom_def_ettg_exto","nom_crtr_prso_juri",
+    "pedido","complemento_do_pedido","dt_entrada_estrategia","dt_finalizacao_estrategia",
+    "data_transbordo","motivo_transbordo"
+).agg(
+    F.collect_list("automatizado").alias("array_campos"),
+    F.size(F.collect_list("automatizado")).alias("tamanho"),
+    F.size(F.expr("filter(collect_list(automatizado), x -> x=1)")).alias("automatizados")
+).withColumn("mes_entrada", F.month("dt_entrada_estrategia")) \
+ .withColumn("ano_entrada", F.year("dt_entrada_estrategia")) \
+ .withColumn("mes_finalizacao", F.month("dt_finalizacao_estrategia")) \
+ .withColumn("ano_finalizacao", F.year("dt_finalizacao_estrategia"))
+
+# -----------------------------
+# 8️⃣ ESTRATEGIA_AUTOMATICA
+# -----------------------------
+df_estrategia = df_flag.filter((F.col("flag_def_automatica")==1) & (F.col("rn_cad")==1)) \
+    .withColumn("PEDIDO", F.explode("pedidos")) \
+    .filter(F.col("PEDIDO.ind_pedi_prin")==True) \
+    .select(
+        "idt_unic_cada","idt_unic_caso",
+        F.lit("DEF").alias("etapa"),
+        "nom_crtr_prso_juri",
+        F.col("PEDIDO.nom_pedi_prso").alias("pedido"),
+        "dt_entrada_estrategia",
+        F.month("dt_entrada_estrategia").alias("mes_entrada"),
+        F.year("dt_entrada_estrategia").alias("ano_entrada"),
+        "dt_finalizacao_estrategia",
+        F.month("dt_finalizacao_estrategia").alias("mes_finalizacao"),
+        F.year("dt_finalizacao_estrategia").alias("ano_finalizacao"),
+        F.lit(1).alias("tamanho"),
+        F.lit(1).alias("automatizados"),
+        "data_transbordo","motivo_transbordo",
+        F.array(F.lit(1)).alias("array_campos")
+    )
+
+# -----------------------------
+# 9️⃣ UNION FINAL
+# -----------------------------
+df_final = df_percentual.unionByName(df_estrategia)
