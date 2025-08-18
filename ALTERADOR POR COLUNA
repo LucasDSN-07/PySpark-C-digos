@@ -87,7 +87,8 @@ resultado = (
     .groupBy("cod_def")
     .agg(
         F.sum(F.when(F.col("nome_alterador") == "EX3 Integrador", F.col("qtd_colunas_alteradas")).otherwise(0)).alias("automatica"),
-        F.sum(F.when(F.col("nome_alterador") != "EX3 Integrador", F.col("qtd_colunas_alteradas")).otherwise(0)).alias("manual")
+        F.sum(F.when(F.col("nome_alterador") != "EX3 Integrador", F.col("qtd_colunas_alteradas")).otherwise(0)).alias("manual"),
+        F.max("data_alteracao").alias("ultima_data")  # ou rn para pegar a última data
     )
 )
 
