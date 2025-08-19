@@ -1,0 +1,112 @@
+CONFIGURAÇÃO GLUE 
+%idle_timeout 29
+%glue_version 4.0
+%worker_type G.1X
+%number_of_workers 2
+%region sa-east-1
+%security_config authorized-security-configuration
+%connections analytics-glue-connection-aza, analytics-glue-connection-azc
+%additional_python_modules awswrangler, boto3, numpy==1.21.0
+
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame 
+
+# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+
+
+import re
+import json
+import datetime
+import locale
+import awswrangler as wr
+import pandas as pd
+import boto3
+from itertools import product
+from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from awsglue.transforms import Filter
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
+from pyspark.sql.functions import col, from_json, explode, when, udf, regexp_replace, lit, concat_ws, collect_list, array_distinct, array
+
+
+
+
+
+
+
+# Carregar o arquivo CSV do Catálogo de Dados do Glue
+datasource = glueContext.create_dynamic_frame.from_catalog(
+  database="db_corp_juridico_esteiradofuturo_sor_01",
+  table_name="tbex3861_itgr_resu_qstr_jgle",
+  transformation_ctx="datasource"
+)
+
+
+# Converter para DataFrame
+df = datasource.toDF()
+
+
+#CÓDIGO PARA SALVAR TABELA
+dados_primarios_final_.write.format("parquet").mode("overwrite").saveAsTable("workspace_db.dados_primarios")
+
+
+
+
+query_bj_one = '''with andamentos_bj as (
+select cdpasta,
+nrandam,
+codtpand,
+cddetand,
+trim(txnovand) andamento,
+trim(txdetand) detalhe_andamento,
+cast(date_parse(cast(dtandame as varchar), '%Y%m%d') as date) dtandame,
+dtalinic,
+case
+when dtandvlr = 0 then null else cast(
+date_parse(cast(dtandvlr as varchar), '%Y%m%d') as date
+)
+end dtand_vlr
+from "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjapr0"
+where trim(txnovand) in ('SOLICITACAO PARA ANALISE DE DECISAO')
+and trim(txdetand) in ('ACORDO')
+),
+docs_bj as (
+select ima.cdpasta,
+ima.dtalinic dt_doc_bj,
+cla.nom_claf_docm nome_documento,
+andbj.andamento andamento_bj,
+andbj.detalhe_andamento detalhe_andamento_bj,
+andbj.dtandame,
+andbj.dtand_vlr
+from "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjima0" ima
+left join "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjcla0" cla on ima.cod_tipo_claf_docm = cla.cod_tipo_claf_docm
+inner join andamentos_bj andbj on ima.cdpasta = andbj.cdpasta
+and ima.nrandam = andbj.nrandam
+order by ima.cdpasta
+)
+select dbj.*, pro.nr_processo nr_processo_one
+from docs_bj dbj
+left join "db_corp_juridico_juridicodadoslegados_spec_01"."tb_pco_bi_processos" pro on cast(dbj.cdpasta as varchar) = pro.cd_pasta'''
+workgroup = 'analytics-workgroup'
+db = "workspace_db" # Database destino
+
+
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_bj_one = wr.athena.read_sql_query(
+  sql=query_bj_one,
+  database=db,
+  workgroup=workgroup
+)
