@@ -1,0 +1,14 @@
+
+df_pedidos = df.withColumn("pedido", explode(col("pedidos"))) \
+               .withColumn("audiencia", explode(col("audiencias"))) \
+               .withColumn("autor", explode(col("autores")))
+
+
+
+
+df_pedidos.select(
+    col("num_prso"),
+    col("pedido.nom_pedi").alias("nome_pedido"),
+    col("audiencia.txt_fort_audi").alias("texto_audiencia"),
+    col("autor.nom_enlv").alias("nome_autor")
+)
