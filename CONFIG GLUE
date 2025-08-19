@@ -1,12 +1,12 @@
 CONFIGURAÇÃO GLUE 
-%idle_timeout 29
-%glue_version 4.0
-%worker_type G.1X
-%number_of_workers 2
+%idle_timeout 29  #tempo em minutos que a sessão pode ficar ociosa antes de ser encerrada automaticamente
+%glue_version 4.0  # VERSÃO DO Glue
+%worker_type G.1X  #Define o tipo de worker (máquina que roda seu job)
+%number_of_workers 2   #Quantidade de workers que serão usados no Cluster
 %region sa-east-1
 %security_config authorized-security-configuration
 %connections analytics-glue-connection-aza, analytics-glue-connection-azc
-%additional_python_modules awswrangler, boto3, numpy==1.21.0
+%additional_python_modules awswrangler, boto3, numpy==1.21.0  #Bibliotecas adicionais para usar
 
 import sys
 from awsglue.transforms import *
@@ -46,7 +46,8 @@ from pyspark.sql.functions import col, from_json, explode, when, udf, regexp_rep
 
 
 
-# Carregar o arquivo CSV do Catálogo de Dados do Glue
+
+# LER A TABELA DE DADOS DIRETAMENTE PELO GLUE
 datasource = glueContext.create_dynamic_frame.from_catalog(
   database="db_corp_juridico_esteiradofuturo_sor_01",
   table_name="tbex3861_itgr_resu_qstr_jgle",
