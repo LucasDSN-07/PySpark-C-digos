@@ -1,0 +1,30 @@
+# Tabela 1
+df1 = glueContext.create_dynamic_frame.from_catalog(
+    database="db_corp_juridico_esteiradofuturo_sor_01",
+    table_name="tbex3861_itgr_resu_qstr_jgle",
+    push_down_predicate="data_coluna >= '2025-01-01' AND data_coluna < '2025-04-01'",
+    transformation_ctx="df1"
+)
+
+# Tabela 2
+df2 = glueContext.create_dynamic_frame.from_catalog(
+    database="db_corp_juridico_esteiradofuturo_sor_01",
+    table_name="outra_tabela",
+    push_down_predicate="data_coluna >= '2025-01-01' AND data_coluna < '2025-04-01'",
+    transformation_ctx="df2"
+)
+
+df1_spark = df1.toDF()
+df2_spark = df2.toDF()
+
+
+
+FAZER JOIN 
+
+from pyspark.sql import functions as F
+
+df_joined = df1_spark.join(
+    df2_spark,
+    df1_spark["chave_comum"] == df2_spark["chave_comum"],
+    "left"  # ou "inner", "right", "full"
+)
