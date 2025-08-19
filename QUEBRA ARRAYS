@@ -1,14 +1,16 @@
+from pyspark.sql import functions as F
 
-df_pedidos = df.withColumn("pedido", explode(col("pedidos"))) \
-               .withColumn("audiencia", explode(col("audiencias"))) \
-               .withColumn("autor", explode(col("autores")))
+
+df_pedidos = df.withColumn("pedido", F.explode(F.col("pedidos"))) \
+               .withColumn("audiencia", F.explode(F.col("audiencias"))) \
+               .withColumn("autor", F.explode(F.col("autores")))
 
 
 
 
 df_pedidos.select(
-    col("num_prso"),
-    col("pedido.nom_pedi").alias("nome_pedido"),
-    col("audiencia.txt_fort_audi").alias("texto_audiencia"),
-    col("autor.nom_enlv").alias("nome_autor")
+    F.col("num_prso"),
+    F.col("pedido.nom_pedi").alias("nome_pedido"),
+    F.col("audiencia.txt_fort_audi").alias("texto_audiencia"),
+    F.col("autor.nom_enlv").alias("nome_autor")
 )
