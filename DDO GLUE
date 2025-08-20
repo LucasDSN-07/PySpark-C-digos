@@ -1,0 +1,264 @@
+#CONFIGURAÇÃO DO GLUE
+%idle_timeout 29   %glue_version 4.0  
+%worker_type G.1X  
+%number_of_workers 2  
+%region sa-east-1
+%security_config authorized-security-configuration
+%connections analytics-glue-connection-aza, analytics-glue-connection-azc
+%additional_python_modules awswrangler, boto3, numpy==1.21.0 
+
+
+
+#BIBLIOTECAS IMPORTADAS
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame 
+import re
+import json
+import datetime
+import locale
+import awswrangler as wr
+import pandas as pd
+import boto3
+from itertools import product
+from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from awsglue.transforms import Filter
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
+from pyspark.sql.functions import to_date, to_timestamp, date_format
+
+
+
+# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+
+query_ddo = '''
+SELECT 
+cad.idt_unic_cada
+,cad.idt_unic_caso
+,cad.nom_crtr_prso_juri
+,date_parse(substr(cad.dat_hor_cria_cada_prso_juri, 1, 10), '%d/%m/%Y') as dt_criacao
+,date_parse(substr(cad.dat_hor_finz_cada_prso_juri, 1, 10), '%d/%m/%Y') as dt_finalizacao
+,cad.dat_hor_ulti_alte_cada_prso_juri
+,cad.dat_hor_trno_prso_juri
+,cad.des_moti_trno
+,ope.OPERACAO.nom_pedi
+,ROW_NUMBER() OVER(PARTITION BY cad.idt_unic_cada, cad.num_prso ORDER BY cad.dat_hor_ulti_alte_cada_prso_juri DESC ) AS rn_cad
+,ope.OPERACAO.idt_unic_dado_oper
+,ope.OPERACAO.nom_ulti_alte_cada_prso_juri
+,ope.OPERACAO.cod_fun_cria_cada_prso_juri
+,ope.OPERACAO.nom_cria_cada_prso_juri
+,ope.OPERACAO.nom_rspl_cada_prso_juri
+,ope.OPERACAO.ind_vlr_depo_nao_utzd
+,ope.OPERACAO.ind_clie_depo_vlr_juio
+,ope.OPERACAO.ind_clie_ineo_devo_vlr
+,ope.OPERACAO.dat_vlr_libr
+,ope.OPERACAO.vlr_libr_rfin
+,ope.OPERACAO.num_oper_antr
+,ope.OPERACAO.vlr_retd_quit_rfin
+,ope.OPERACAO.vlr_libr_cred
+,ope.OPERACAO.cod_cont
+,ope.OPERACAO.cod_agen
+,ope.OPERACAO.cod_banc
+,ope.OPERACAO.des_form_libe_cred
+,ope.OPERACAO.ind_libe_cred
+,ope.OPERACAO.vlr_totl_pago_ctrt_rngd
+,ope.OPERACAO.qtd_parc_pago_rene
+,ope.OPERACAO.dat_inic_ctrt_rngd
+,ope.OPERACAO.dat_fina_ctrt_rngd
+,ope.OPERACAO.vlr_fina_ctrt
+,ope.OPERACAO.num_parc_ctrt_rngd
+,ope.OPERACAO.num_novo_ctrt_rngd
+,ope.OPERACAO.num_inrn_ctrt_rngd
+,ope.OPERACAO.des_vers_rene
+,ope.OPERACAO.ind_digr_blqa
+,ope.OPERACAO.identificada_baixa_escabin
+,ope.OPERACAO.nom_loja
+,ope.OPERACAO.cod_loja
+,ope.OPERACAO.cod_matr
+,ope.OPERACAO.cod_conv_pagd
+,ope.OPERACAO.vlr_novo_ctrt_rfin
+,ope.OPERACAO.num_novo_ctrt_rfin
+,ope.OPERACAO.ind_ulti_ctrt_rcld_rfin
+--,ope.OPERACAO.des_stat_ctrt
+,ope.OPERACAO.vlr_totl_parc_pago
+,ope.OPERACAO.qtd_parc_pago
+,ope.OPERACAO.vlr_parc
+,ope.OPERACAO.qtd_parc
+,ope.OPERACAO.ind_exse_desc_bene
+,ope.OPERACAO.vlr_cntc_com_encr
+,ope.OPERACAO.des_cana_cntc
+,ope.OPERACAO.dat_cntc
+,ope.OPERACAO.cod_orig_ctrt    --Origem do Contrato
+,ope.OPERACAO.num_oper_ctrt   
+,ope.OPERACAO.cod_dado_oper_prso_juri
+,ope.OPERACAO.dat_hor_ulti_alte_cada_prso_juri
+,ope.OPERACAO.dat_hor_cria_cada_prso_juri
+,ope.OPERACAO.nom_empr_pace
+,ope.OPERACAO.num_prso_orig
+,ope.OPERACAO.num_past_orig_dmnd
+,ope.OPERACAO.dat_decs
+,ope.OPERACAO.txt_detr_docm_obri
+,ope.OPERACAO.ind_cnst_soli_prde
+,ope.OPERACAO.dat_soli_prde
+,ope.OPERACAO.idt_banc_prpo
+,ope.OPERACAO.ind_cnst_dsis_prde
+,ope.OPERACAO.dat_dsis
+,ope.OPERACAO.dat_prde
+,ope.OPERACAO.ind_dat_envo_sald_deve
+,ope.OPERACAO.dat_envo
+,ope.OPERACAO.ind_dat_ted
+,ope.OPERACAO.dat_ted
+,ope.OPERACAO.ind_dat_baix_oper
+,ope.OPERACAO.dat_baix_oper
+,ope.OPERACAO.idt_unic_pedi
+,ope.OPERACAO.idt_tipo_baix_ctrt_rcld
+,ope.OPERACAO.dat_baix_ctrt_rcld
+,ope.OPERACAO.txt_nmre_oper
+,ope.OPERACAO.txt_chas
+--,ope.OPERACAO.des_stat_ctrt
+,ope.OPERACAO.txt_nmre_prpt
+,ope.OPERACAO.des_tipo_tari_rqrd
+,ope.OPERACAO.des_juro_rqrd
+,ope.OPERACAO.des_segu_prot_finn
+,ope.OPERACAO.des_ctrt_cdid
+,ope.OPERACAO.num_ano_fabr
+,ope.OPERACAO.num_ano_mode
+,ope.OPERACAO.txt_marc
+,ope.OPERACAO.txt_mode
+,ope.OPERACAO.txt_plac
+,ope.OPERACAO.des_uf_plac
+,ope.OPERACAO.num_rena
+,ope.OPERACAO.num_antr_oper_1
+,ope.OPERACAO.num_antr_oper_2
+,ope.OPERACAO.num_antr_oper_3
+,ope.OPERACAO.num_antr_oper_4
+,ope.OPERACAO.num_antr_oper_5
+,ope.OPERACAO.num_antr_oper_6
+,ope.OPERACAO.num_antr_oper_7
+,ope.OPERACAO.num_antr_oper_8
+,ope.OPERACAO.dat_antr_oper_1
+,ope.OPERACAO.dat_antr_oper_2
+,ope.OPERACAO.dat_antr_oper_3
+,ope.OPERACAO.dat_antr_oper_4
+,ope.OPERACAO.dat_antr_oper_5
+,ope.OPERACAO.dat_antr_oper_6
+,ope.OPERACAO.dat_antr_oper_7
+,ope.OPERACAO.dat_antr_oper_8
+,ope.OPERACAO.des_cana_forl
+,ope.OPERACAO.des_ind_trco
+,ope.OPERACAO.num_autentico
+,ope.OPERACAO.des_caus_baix
+,ope.OPERACAO.des_trat_prde
+,ope.OPERACAO.txt_cida_rtrd
+,ope.OPERACAO.txt_estd_rtrd
+,CASE 
+  WHEN ope.OPERACAO.num_oper_ctrt IS NULL THEN 1 ELSE 0 END AS flag_nao_preenchido
+,cad.dados_operacao
+FROM "db_corp_juridico_esteiradofuturo_sor_01"."iaas_salesforce_cada_received" as cad
+LEFT JOIN UNNEST (cad.dados_operacao) WITH ORDINALITY ope(OPERACAO, n) ON TRUE
+WHERE 1=1 
+--AND cad.idt_unic_cada IN ('CAD-000222641','CAD-000223026','CAD-000225236')
+  AND cad.nom_crtr_prso_juri in ('IC','Veículos Contra Cobrança','Serviços Bancários', 'DCR PF CONTRA COBRANÇA', 'Fraudes e Ilícitos')
+  AND date_parse(substr(dat_hor_cria_cada_prso_juri, 1, 10),'%d/%m/%Y') >= TIMESTAMP '2024-01-01 00:00:00'
+  AND ano_mes_dia_rfrc NOT IN (20250724,20250613,20250520,20250215,20241015,20241111,20241113,20241203,20241204,20241205,20241209)
+'''
+workgroup = 'analytics-workgroup'
+db = "workspace_db" # Database destino
+
+
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_cadastro = wr.athena.read_sql_query(
+ sql=query_ddo,
+ database=db,
+ workgroup=workgroup
+)
+
+
+
+#BIBLIOTECAS IMPORTANTES NO CODIGO PARA CONTAGEM DOS CAMPOS
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+
+# Configuração das regras para identificar contagem de campos
+regras = [
+    {
+        "colunas": ["cod_conv_pagd"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Portabilidade','Proposta excluída'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["des_cana_cntc","cod_loja","num_novo_ctrt_rfin"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["cod_orig_ctrt","num_oper_ctrt","ind_ulti_ctrt_rcld_rfin"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Exibição de Documentos','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["dat_cntc","cod_agen","cod_banc","cod_cont","dat_vlr_libr","des_form_libe_cred","ind_exse_desc_bene","ind_libe_cred","cod_matr","nom_loja","qtd_parc","qtd_parc_pago","vlr_parc","vlr_cntc_com_encr","vlr_novo_ctrt_rfin","vlr_libr_rfin","vlr_libr_cred","vlr_retd_quit_rfin"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["num_oper_antr"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP', 'Exibição de Documentos','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["identificada_baixa_escabin","ind_digr_blqa","ind_clie_ineo_devo_vlr","ind_vlr_depo_nao_utzd","ind_clie_depo_vlr_juio"],
+        "nom_pedi": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade','Proposta excluída'],
+        "data": "2025-03-29 00:00:00"
+    }
+]
+
+
+# Lista de todas as colunas de flags
+colunas_flags = [col for regra in regras for col in regra["colunas"]]
+
+# Criar as colunas de flag temporárias (1 e 2)
+df_flags = df
+for regra in regras:
+    colunas = regra["colunas"]
+    nom_pedi_list = regra["nom_pedi"]
+    dt_limite = regra["data"]
+    
+    for col_check in colunas:
+      cond_col = F.when(
+          (F.col(col_check).isNotNull()) &
+          (F.col("nom_crtr_prso_juri") == regra["carteira"]) &
+          (F.col("nom_pedi").isin(regra["nom_pedi"])) &
+          (F.col("dt_criacao") >= F.lit(regra["data"])),
+          F.lit(1)
+      ).when(
+          F.col(col_check).isNotNull(),
+          F.lit(2)
+      ).otherwise(F.lit(0))
+        
+        df_flags = df_flags.withColumn(f"flag_{col_check}", cond_col)
+
+# Somar as flags para gerar "automatica" e "manual"
+# Forma correta usando soma de colunas PySpark
+automatica_expr = sum(F.when(F.col(f"flag_{c}") == 1, 1).otherwise(0) for c in colunas_flags)
+manual_expr = sum(F.when(F.col(f"flag_{c}") == 2, 1).otherwise(0) for c in colunas_flags)
+
+df_final = df_flags.withColumn("automatica", automatica_expr).withColumn("manual", manual_expr)
+
+
+
+
+
