@@ -1,0 +1,149 @@
+#CONFIGURAÇÃO DO GLUE
+%idle_timeout 29   %glue_version 4.0  
+%worker_type G.1X  
+%number_of_workers 2  
+%region sa-east-1
+%security_config authorized-security-configuration
+%connections analytics-glue-connection-aza, analytics-glue-connection-azc
+%additional_python_modules awswrangler, boto3, numpy==1.21.0 
+
+
+
+#BIBLIOTECAS IMPORTADAS
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame 
+import re
+import json
+import datetime
+import locale
+import awswrangler as wr
+import pandas as pd
+import boto3
+from itertools import product
+from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from awsglue.transforms import Filter
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
+from pyspark.sql.functions import to_date, to_timestamp, date_format
+
+
+
+# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+
+
+query_cadastro = '''
+CONSULTA AQUI
+'''
+
+
+
+
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_cadastro = wr.athena.read_sql_query(
+ sql=query_cadastro,
+ database=db,
+ workgroup=workgroup
+)
+
+
+
+
+#DEFININDO A TIPAGEM DOS DADOS DO SCHEMA
+schema = StructType([
+  StructField("idt_unic_caso", StringType(), True),
+  StructField("idt_unic_cada", StringType(), True),
+  StructField("nom_crtr_prso_juri", StringType(), True),
+  StructField("pedido", StringType(), True),
+  StructField("dat_hor_cria_cada_prso_juri", StringType(), True),   
+  StructField("mes_entrada", StringType(), True),
+  StructField("ano_entrada", StringType(), True),
+  StructField("dat_hor_finz_cada_prso_juri", StringType(), True),
+  StructField("mes_finalizacao", StringType(), True),
+  StructField("ano_finalizacao", StringType(), True), 
+  StructField("tamanho", StringType(), True),  
+  StructField("tamanho_final", StringType(), True),  
+  StructField("automatizados", StringType(), True), 
+  StructField("campos_preenchidos_adm", StringType(), True),  
+  StructField("campos_automaticos_adm", StringType(), True),  
+  StructField("motivo_transbordo", StringType(), True),
+  StructField("flag_nao_preenchido", StringType(), True)
+])
+
+
+
+
+
+# Converter para DataFrame
+df_cadastro = spark.createDataFrame(df_cadastro,schema)
+
+
+
+
+#MUDANDO FORMATO DA DATA
+df_cadastro = df_cadastro.withColumn(
+  "data_criacao", 
+  to_timestamp("dat_hor_cria_cada_prso_juri", "dd/MM/yyyy HH:mm")
+)
+
+# Converter para DateType (apenas a data)
+df_cadastro = df_cadastro.withColumn(
+  "data_criacao", 
+  to_date("data_criacao")
+)
+
+
+#MUDANDO PARA FORMATO 26/03/2024
+df_cadastro = df_cadastro.withColumn(
+  "data_criacao", date_format("data_criacao", "dd/MM/yyyy")
+)
+
+
+
+
+# Selecionar as colunas especificadas
+colunas = [
+  'idt_unic_caso', 'idt_unic_cada', 'nom_crtr_prso_juri', 'pedido', 
+  'dat_hor_cria_cada_prso_juri', 'mes_entrada', 'ano_entrada', 
+  'dat_hor_finz_cada_prso_juri', 'mes_finalizacao', 'ano_finalizacao', 
+  'tamanho', 'tamanho_final', 'automatizados', 'campos_preenchidos_adm', 
+  'campos_automaticos_adm', 'motivo_transbordo', 'flag_nao_preenchido', 
+  'data_criacao'
+]
+
+
+# Aplicar o select no DataFrame
+df_selecionado = df_cadastro.select(*colunas)
+
+
+# Mostrar os dados do DataFrame selecionado
+df_selecionado.show()
+
+
+
+#concertando coluna com motivos de transbordo
+
+valores_permitidos = ["Estratégia Concluída","Com Sentença - Outros","Assunto Sensível","Ação Mista","Reclassificação de Carteira/Pedido","Aceite de Escritório","Com Sentença - Extinção"]
+
+
+df_selecionado = df_selecionado.withColumn(
+  "motivo_transbordo",
+  F.when(F.col("motivo_transbordo").isin(valores_permitidos), F.col("motivo_transbordo")) 
+  .otherwise("") 
+)
+
+
+
+#SALVANDO DF
+df_selecionado.write.format("parquet").mode("overwrite").saveAsTable("workspace_db.percentual_cadastro")
