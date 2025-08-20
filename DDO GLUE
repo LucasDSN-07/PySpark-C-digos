@@ -179,12 +179,22 @@ db = "workspace_db" # Database destino
 
 
 # Executa a consulta SQL no Athena e carrega os dados como DataFrame
-df_cadastro = wr.athena.read_sql_query(
+df_ddo = wr.athena.read_sql_query(
  sql=query_ddo,
  database=db,
  workgroup=workgroup
 )
 
+
+#DEIXA TUDO EM STRING PARA EVITAR PROBLEMAS 
+schema = StructType([
+    StructField(col_name, StringType(), True) 
+    for col_name in df.columns
+])
+
+
+# Converter para DataFrame
+df_ddo = spark.createDataFrame(df_ddo,schema)
 
 
 #BIBLIOTECAS IMPORTANTES NO CODIGO PARA CONTAGEM DOS CAMPOS
@@ -231,7 +241,7 @@ regras = [
 colunas_flags = [col for regra in regras for col in regra["colunas"]]
 
 # Criar as colunas de flag temporárias (1 e 2)
-df_flags = df
+df_flags = df_ddo
 for regra in regras:
     colunas = regra["colunas"]
     nom_pedi_list = regra["nom_pedi"]
