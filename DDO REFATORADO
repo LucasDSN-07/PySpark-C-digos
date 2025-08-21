@@ -116,7 +116,6 @@ ex3_caso AS caso
 ,ex3_numero_conta_digital   --Numero conta digital
 ,ex3_numero_da_apolice   --Número da apolice
 ,ex3_numero_da_op   --Numero da OP
-,n_mero_da_opera_o_anterior_contrato_ori   --Número da Operação
 ,ex3_numero_da_operacao_anterior   --Número da Operação anterior
 ,ex3_numero_da_proposta   --Número da proposta
 ,ex3_numero_do_cheque   --Número do Cheque
@@ -206,16 +205,19 @@ from pyspark.sql.types import StructType, StructField, StringType, TimestampType
 regras = [
     {
         "colunas": ["ex3_convenio_pagador"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Portabilidade','Proposta excluída'],
         "data": "2025-03-29 00:00:00"
     },
     {
         "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP'],
         "data": "2025-03-29 00:00:00"
     },
     {
         "colunas": ["ex3_origem_do_contrato_label","ex3_numero_da_operacao_contrato","ex3_ultimo_contrato_reclamado_refin"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Exibição de Documentos','Portabilidade'],
         "data": "2025-03-29 00:00:00"
     },
@@ -223,19 +225,34 @@ regras = [
         "colunas": [
                     "ex3_data_da_contratacao","ex3_agencia","ex3_banco","ex3_conta","ex3_data_do_valor_liberado","ex3_forma_da_liberacao_do_credito","ex3_houve_desconto_no_beneficio","ex3_houve_liberacao_do_credito","ex3_matricula"
                     ,"ex3_nome_da_loja","ex3_quantidade_de_parcelas","ex3_quantidade_de_parcelas_pagas","ex3_valor_da_parcela","ex3_valor_da_contratacao_com_encargos","ex3_valor_do_novo_contrato_refinanc","ex3_valor_liberado_para_refin","ex3_valor_liberado_creditado","ex3_valor_retido_para_quita_o_de_refin"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade'],
         "data": "2025-03-29 00:00:00"
     },
     {
         "colunas": ["ex3_numero_da_operacao_anterior"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP', 'Exibição de Documentos','Portabilidade'],
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["identificada_baixa_escabin","ex3_digitador_bloqueado","ex3_cliente_afirma_querer_devolver_valor","ind_vlr_depo_nao_utzd","ex3_cliente_depositou_valor_em_juizo"],
+        "colunas": ["identificada_baixa_escabin","ex3_digitador_bloqueado","ex3_cliente_afirma_querer_devolver_valor","ex3_cliente_depositou_valor_em_juizo"],
+        "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade','Proposta excluída'],
         "data": "2025-03-29 00:00:00"
-    }
+    },
+    {
+        "colunas": ["ex3_placa","ex3_renavam","ex3_uf_placa","ex3_modelo"."ex3_marca","ex3_ano_modelo","ex3_ano_de_fabricacao","ex3_data_da_contratacao","ex3_numero_da_proposta","ex3_chassi","ex3_numero_da_operacao","ex3_numero_da_operacao_contrato"],
+        "carteira": "Veículos Contra Cobrança",
+        "ex3_complemento_do_pedido": ['Juros','Seguro Proteção Financeira','Ilegitimidade','Tarifa','Exibição de Documentos'],
+        "data": "2024-09-27 00:00:00"
+    },
+    {
+        "colunas": ["ex3_seguro_protecao_financeira","ex3_juros_requeridos_label","ex3_tarifas_requeridas_label"],
+        "carteira": "Veículos Contra Cobrança",
+        "ex3_complemento_do_pedido": ['Juros','Seguro Proteção Financeira','Ilegitimidade','Tarifa','Exibição de Documentos'],
+        "data": "2024-12-09 00:00:00"
+    },
 ]
 ---------------------------------------------------------------------------------------------------------
 
