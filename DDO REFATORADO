@@ -1,0 +1,271 @@
+#CONFIGURAÇÃO DO GLUE
+%idle_timeout 29   %glue_version 4.0  
+%worker_type G.1X  
+%number_of_workers 2  
+%region sa-east-1
+%security_config authorized-security-configuration
+%connections analytics-glue-connection-aza, analytics-glue-connection-azc
+%additional_python_modules awswrangler, boto3, numpy==1.21.0 
+
+---------------------------------------------------------------------------------------------------------
+
+#BIBLIOTECAS IMPORTADAS
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame 
+import re
+import json
+import datetime
+import locale
+import awswrangler as wr
+import pandas as pd
+import boto3
+from itertools import product
+from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from awsglue.transforms import Filter
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
+from pyspark.sql.functions import to_date, to_timestamp, date_format
+
+---------------------------------------------------------------------------------------------------------
+
+# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+---------------------------------------------------------------------------------------------------------
+
+query_ddo = '''
+SELECT 
+ex3_caso AS caso
+,name AS idt_unic_ddo
+,ex3_complemento_do_pedido
+,ex3_numero_da_pasta_origem_da_demanda
+,ex3_numero_protocolo
+,ex3_pedidos_do_processo  
+,ex3_reclamacao_se_refere_ao_produto_iti   --A reclamação se refere ao produto ITI?​
+,ex3_ade   --ADE
+,ex3_agencia   --Agência
+,ex3_agencia_conta_digital   --Agencia conta digital
+,ex3_agencia_de_saque_da_op   --Agência de Saque da OP
+,ex3_agencia_recebedora   --Agência recebedora​
+,ex3_alega_que_nao_movimentou_conta_no_re   --Alega que nao movimentou conta no RE
+,ex3_analise_da_reclamacao   --Análise da Reclamação​
+,ex3_analise_administrativa   --Análise inicial de tratativa
+,ex3_ano_de_fabricacao   --Ano Fabricação
+,ex3_ano_modelo   --Ano Modelo
+,   --Autor alega super endividamento
+,ex3_autor_possui_conta_no_itau   --Autor possui conta no Itaú?​
+,ex3_banco   --Banco
+,ex3_banco_recebedor   --Banco recebedor​
+,ex3_canal_de_contratacao   --Canal de Contratação
+,ex3_canal_de_formalizacao   --Canal de Formalização
+,ex3_causa_da_baixa_label   --Causa da Baixa
+,ex3_chassi   --Chassi
+,   --CHIPRAS
+,ex3_cliente_afirma_querer_devolver_valor   --Cliente Afirma Querer Devolver Valor?
+,ex3_cliente_depositou_valor_em_juizo   --Cliente Depositou Valor em Juízo
+,ex3_cliente_informa_receber_notificacao   --Cliente informa receber notificação?​
+,ex3_codigo_da_loja   --Código da loja
+,ex3_conta   --Conta
+,ex3_status_da_conta   --Conta
+,ex3_conta_recebedora   --Conta recebedora​
+,ex3_convenio_pagador   --Convênio pagador
+,ex3_data_da_baixa   --Data da baixa
+,ex3_data_da_contratacao   --Data da contratação
+,ex3_data_da_contratacao   --Data da contratação
+,ex3_data_da_primeira_cobranca   --Data da primeira cobrança
+,ex3_data_da_ultima_cobranca   --Data da ultima cobrança
+,ex3_data_da_ultima_movimentacao   --Data da ultima movimentacao
+,ex3_data_da_ultima_renovacao   --Data da ultima renovação
+,ex3_data_do_cad_regime_de_encerramento   --Data do cad. do regime de encerramento​
+,ex3_numero_do_contrato_anterior   --Data do contrato anterior 1
+,ex3_data_do_encerramento   --Data do encerramento
+,ex3_data_do_fato_gerador   --Data do fato gerador
+,ex3_data_do_valor_liberado   --Data do Valor liberado
+,ex3_data_vencimento_da_1_parcela   --Data vencimento da 1ª parcela/parcela ún
+,ex3_descreva   --Descreva
+,ex3_descreva_tipo_de_baixa   --Descreva o tipo de baixa
+,ex3_descricao_da_empresa   --Descrição da empresa
+,ex3_digitador_bloqueado   --Digitador Bloqueado
+,createddate   --Endereço de cadastro é o mesmo dos autos
+,ex3_forma_da_liberacao_do_credito   --Forma da liberação do Crédito
+,ex3_forma_de_pagamento_das_parcelas   --Forma de pagamento das parcelas​
+,ex3_autor_possui_conta_no_itau   --Há conta Itaú envolvida?​
+,ex3_houve_desconto_no_beneficio   --Houve desconto no benefício
+,ex3_houve_liberacao_do_credito   --Houve liberação de crédito
+,ex3_houve_renovacao_do_seguro   --Houve renovação doSeguro
+,ex3_houve_troco_label   --Houve Troco
+,identificada_baixa_escabin   --Identificada Baixa Escabin
+,ex3_juros_requeridos_label   --Juros Requeridos
+,ex3_marca   --Marca
+,ex3_matricula   --Matrícula
+,ex3_tipo_de_contrato   --Modalidade do Contrato
+,ex3_modelo   --Modelo do Carro
+,ex3_motivador_do_cancelamento   --Motivador do cancelamento​
+,ex3_motivo_da_reclamacao_label   --Motivo da reclamação
+,ex3_numero_do_contrato_anterior   --Nº do contrato anterior 1
+,ex3_nome_da_loja   --Nome da loja
+,ex3_numero_conta_digital   --Numero conta digital
+,ex3_numero_da_apolice   --Número da apolice
+,ex3_numero_da_op   --Numero da OP
+,n_mero_da_opera_o_anterior_contrato_ori   --Número da Operação
+,ex3_numero_da_operacao_anterior   --Número da Operação anterior
+,ex3_numero_da_proposta   --Número da proposta
+,ex3_numero_do_cheque   --Número do Cheque
+,ex3_numero_da_operacao_contrato   --Número do Contrato
+,n_mero_do_novo_contrato_refinancimento   --Número do Novo Contrato (Refinancimento)
+,ex3_numero_da_operacao   --Número do Operação
+,ex3_ocorrencia_com_debito_aut_trata_de   --Ocorrência com Débito Aut. se trata de
+,ex3_origem_do_contrato_label   --Origem do Contrato
+,ex3_origem_do_encerramento   --Origem do encerramento​
+,ex3_uf_placa   --Placa
+,   --Problema Ocorrido
+,ex3_produto_reclamado_label   --Produto reclamado
+,ex3_produto_tarifa_reclamada_label   --Produto/tarifa reclamado
+,ex3_qual_canal_foi_feita_a_formalizacao   --Qual canal foi feita a formalização?
+,ex3_qual_empresa_label   --Qual empresa
+,ex3_qual_o_pacote_reclamado   --Qual o pacote reclamado
+,ex3_quantidade_de_contratos   --Quantidade de Contratos
+,ex3_quantidade_de_parcelas   --Quantidade de parcelas
+,ex3_quantidade_de_parcelas_pagas   --Quantidade de parcelas pagas
+,   --Recebeu um crédito que não solicitou?
+,ex3_reclama_de_venda_casada_subordinada   --Reclama de venda casada/subordinada
+,ex3_reclamacao_envolve_conta_digital   --Reclamação também envolve conta digital?
+,ex3_renavam   --Renavam
+,   --Renda liquida
+,ex3_seguro_contestado_label   --Seguro contestado
+,ex3_seguro_protecao_financeira   --Seguro Proteção Financeira
+,ex3_seguro_reclamado_label   --Seguro reclamado
+,ex3_status_da_conta_do_terceiro_label   --Status da conta
+,ex3_status_da_op_label   --Status da OP
+,ex3_status_do_cheque_label   --Status do Cheque
+,ex3_status_do_contrato_v2_label   --Status do Contrato
+,ex3_status_do_contrato   --Status do contrato antes do ajuizamento
+,ex3_status_do_servico_na_data_apuracao   --Status do serviço na data da apuração​
+,ex3_tarifas_requeridas_label   --Tarifas Requeridas
+,ex3_descreva_tipo_de_baixa   --Tipo de baixa
+,   --Tipo de cartao
+,ex3_tipo_de_conta_do_terceiro_label   --Tipo de Conta
+,ex3_tipo_de_contrato_label   --Tipo de contrato
+,ex3_trata_se_de_contrato_cedido   --Trata-se de Contrato Cedido?
+,ex3_trata_se_de_perda_de_isencao   --Trata-se de perde de isenção
+,ex3_tratou_se_de_portabilidade   --Tratou-se de portabilidade
+,ex3_uf_placa   --UF Placa
+,ex3_ultimo_contrato_reclamado_refin   --Último contrato reclamado refinanciado
+,ex3_valor_da_contratacao_com_encargos   --Valor da contratação com encargos
+,ex3_valor_da_parcela   --Valor da parcela
+,ex3_valor_da_primeira_cobranca   --Valor da primeira cobrança
+,ex3_valor_da_ultima_cobranca   --Valor da ultima cobrança
+,ex3_valor_do_novo_contrato_refinanc   --Valor do Novo Contrato (Refinancimento)
+,ex3_valor_liberado_para_refin   --Valor liberado para Refin
+,ex3_valor_liberado_creditado   --Valor liberado/creditado
+,ex3_valor_retido_para_quita_o_de_refin   --Valor retido para quitação de refin
+,ex3_valor_total_das_parcelas_pagas   --Valor total das parcelas pagas
+FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_cadastro_ddo_hist"
+
+'''
+workgroup = 'analytics-workgroup'
+db = "workspace_db" # Database destino
+
+---------------------------------------------------------------------------------------------------------
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_ddo = wr.athena.read_sql_query(
+ sql=query_ddo,
+ database=db,
+ workgroup=workgroup
+)
+---------------------------------------------------------------------------------------------------------
+
+#DEIXA TUDO EM STRING PARA EVITAR PROBLEMAS 
+schema = StructType([
+    StructField(col_name, StringType(), True) 
+    for col_name in df_ddo.columns
+])  
+
+---------------------------------------------------------------------------------------------------------
+# Converter para DataFrame
+df_ddo = spark.createDataFrame(df_ddo,schema)
+---------------------------------------------------------------------------------------------------------
+
+#BIBLIOTECAS IMPORTANTES NO CODIGO PARA CONTAGEM DOS CAMPOS
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+---------------------------------------------------------------------------------------------------------
+
+# Configuração das regras para identificar contagem de campos
+regras = [
+    {
+        "colunas": ["ex3_convenio_pagador"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Portabilidade','Proposta excluída'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["ex3_origem_do_contrato_label","ex3_numero_da_operacao_contrato","ex3_ultimo_contrato_reclamado_refin"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Exibição de Documentos','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": [
+                    "ex3_data_da_contratacao","ex3_agencia","ex3_banco","ex3_conta","ex3_data_do_valor_liberado","ex3_forma_da_liberacao_do_credito","ex3_houve_desconto_no_beneficio","ex3_houve_liberacao_do_credito","ex3_matricula"
+                    ,"ex3_nome_da_loja","ex3_quantidade_de_parcelas","ex3_quantidade_de_parcelas_pagas","ex3_valor_da_parcela","ex3_valor_da_contratacao_com_encargos","ex3_valor_do_novo_contrato_refinanc","ex3_valor_liberado_para_refin","ex3_valor_liberado_creditado","ex3_valor_retido_para_quita_o_de_refin"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["ex3_numero_da_operacao_anterior"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP', 'Exibição de Documentos','Portabilidade'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["identificada_baixa_escabin","ex3_digitador_bloqueado","ex3_cliente_afirma_querer_devolver_valor","ind_vlr_depo_nao_utzd","ex3_cliente_depositou_valor_em_juizo"],
+        "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade','Proposta excluída'],
+        "data": "2025-03-29 00:00:00"
+    }
+]
+---------------------------------------------------------------------------------------------------------
+
+# Lista de todas as colunas de flags
+colunas_flags = [col for regra in regras for col in regra["colunas"]]
+
+# Criar as colunas de flag temporárias (1 e 2)
+df_flags = df_ddo
+for regra in regras:
+    colunas = regra["colunas"]
+    ex3_complemento_do_pedido_list = regra["ex3_complemento_do_pedido"]
+    dt_limite = regra["data"]
+    
+    for col_check in colunas:
+      cond_col = F.when(
+          (F.col(col_check).isNotNull()) &
+          (F.col("nom_crtr_prso_juri") == regra["carteira"]) &
+          (F.col("ex3_complemento_do_pedido").isin(regra["ex3_complemento_do_pedido"])) &
+          (F.col("dt_criacao") >= F.lit(regra["data"])),
+          F.lit(1)
+      ).when(
+          F.col(col_check).isNotNull(),
+          F.lit(2)
+      ).otherwise(F.lit(0))
+        
+        df_flags = df_flags.withColumn(f"flag_{col_check}", cond_col)
+
+# Somar as flags para gerar "automatica" e "manual"
+# Forma correta usando soma de colunas PySpark
+automatica_expr = sum(F.when(F.col(f"flag_{c}") == 1, 1).otherwise(0) for c in colunas_flags)
+manual_expr = sum(F.when(F.col(f"flag_{c}") == 2, 1).otherwise(0) for c in colunas_flags)
+
+df_final = df_flags.withColumn("automatica", automatica_expr).withColumn("manual", manual_expr)
