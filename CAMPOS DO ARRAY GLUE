@@ -1,0 +1,592 @@
+#CONFIGURAÇÃO DO GLUE
+%idle_timeout 29   %glue_version 4.0  
+%worker_type G.1X  
+%number_of_workers 2  
+%region sa-east-1
+%security_config authorized-security-configuration
+%connections analytics-glue-connection-aza, analytics-glue-connection-azc
+%additional_python_modules awswrangler, boto3, numpy==1.21.0 
+
+---------------------------------------------------------------------------------------------------------
+
+#BIBLIOTECAS IMPORTADAS
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame 
+import re
+import json
+import datetime
+import locale
+import awswrangler as wr
+import pandas as pd
+import boto3
+from itertools import product
+from pyspark.sql import functions as F
+from pyspark.sql import SparkSession
+from pyspark.sql.window import Window
+from awsglue.transforms import Filter
+from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
+from pyspark.sql.functions import to_date, to_timestamp, date_format
+
+---------------------------------------------------------------------------------------------------------
+
+# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
+sc = SparkContext.getOrCreate()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+
+---------------------------------------------------------------------------------------------------------
+
+query_objetos_arrays = '''
+ WITH cad_filtrado AS (
+    SELECT 
+      cad.idt_unic_cada,
+      cad.idt_unic_caso,
+      cad.dat_hor_ulti_alte_cada_prso_juri,
+      cad.reus,
+      cad.autores,
+      cad.audiencias,  
+      cad.advogados,
+      cad.orgaos,
+      cad.escritorios
+    FROM (
+        SELECT       
+      cad.idt_unic_cada,
+      cad.idt_unic_caso,
+      cad.dat_hor_ulti_alte_cada_prso_juri,
+      cad.reus,
+      cad.autores,
+      cad.audiencias,  
+      cad.advogados,
+      cad.orgaos,
+      cad.escritorios,
+               ROW_NUMBER() OVER (
+                   PARTITION BY cad.idt_unic_cada, cad.num_prso
+                   ORDER BY cad.dat_hor_ulti_alte_cada_prso_juri DESC
+               ) AS rn
+        FROM "db_corp_juridico_esteiradofuturo_sor_01"."iaas_salesforce_cada_received" cad
+        WHERE 1=1 
+          AND cad.nom_crtr_prso_juri IN ('IC','Veículos Contra Cobrança','Serviços Bancários', 
+                                         'DCR PF CONTRA COBRANÇA', 'Fraudes e Ilícitos')
+          AND date_parse(substr(cad.dat_hor_cria_cada_prso_juri, 1, 10),'%d/%m/%Y') >= TIMESTAMP '2024-01-01 00:00:00'
+          AND cad.ano_mes_dia_rfrc NOT IN (20250724,20250613,20250520,20250215,20241015,20241111,20241113,
+                                           20241203,20241204,20241205,20241209)
+    )
+    WHERE rn = 1
+),
+
+campos_reu AS (
+    SELECT    
+      cad.idt_unic_cada,
+      cad.idt_unic_caso,
+      cad.dat_hor_ulti_alte_cada_prso_juri,
+      r.REU.nom_empr_polo_regz,
+      r.REU.nom_empr_polo_acao,
+      r.REU.ind_nece_regz_polo_pasv,
+      r.REU.txt_evnt,
+      r.REU.cod_cfcj,
+      r.REU.nom_enlv
+    FROM cad_filtrado cad
+    CROSS JOIN UNNEST (cad.reus) WITH ORDINALITY r(REU, n) 
+),
+
+ARRAY_REU AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN nom_empr_polo_acao IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN nom_empr_polo_regz IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ind_nece_regz_polo_pasv IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN txt_evnt IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN cod_cfcj IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN nom_enlv IS NOT NULL THEN 1 ELSE 0 END
+      ]) AS ARRAY_CAMPOS_REU,
+      idt_unic_cada,
+      idt_unic_caso
+    FROM campos_reu
+),
+
+CONTA_CAMPOS_REU AS (
+    SELECT 
+      idt_unic_caso,
+      idt_unic_cada,
+      cardinality(filter(ARRAY_CAMPOS_REU, x -> x IN (1,2))) AS campos_preenchidos_reu,
+      cardinality(filter(ARRAY_CAMPOS_REU, x -> x = 1)) AS campos_automaticos_reu
+    FROM ARRAY_REU
+),
+
+AGRUPA_POR_CAD_REU AS (
+    SELECT 
+       idt_unic_caso,
+       idt_unic_cada,
+       SUM(campos_preenchidos_reu) AS campos_preenchidos_reu,
+       SUM(campos_automaticos_reu) AS campos_automaticos_reu
+    FROM CONTA_CAMPOS_REU
+    GROUP BY idt_unic_caso, idt_unic_cada
+),
+
+campos_autor AS (
+    SELECT    
+      ,cad.idt_unic_cada
+      ,cad.idt_unic_caso
+      ,cad.dat_hor_ulti_alte_cada_prso_juri
+    ,aut.AUTOR.nom_atr_prin
+    ,aut.AUTOR.cod_cfcj --CPF/CNPJ
+    ,aut.AUTOR.des_perf_atr --Perfil do autor 
+    ,aut.AUTOR.dat_nasc --Data de nascimento 
+    ,aut.AUTOR.part_cnto_tstm
+    ,aut.AUTOR.txt_drta
+    ,aut.AUTOR.txt_moti_reit
+    ,aut.AUTOR.crgo_part_cnto
+    ,aut.AUTOR.dat_reit
+    ,aut.AUTOR.part_cnto_drge_sind
+    ,aut.AUTOR.des_stat_cola
+    ,aut.AUTOR.txt_tipo_cate
+    ,aut.AUTOR.txt_cond_part_cnto
+    ,aut.AUTOR.cod_empr
+    ,aut.AUTOR.nom_empr_part_cnto
+    ,aut.AUTOR.txt_evnt_part_cnto
+    ,aut.AUTOR.txt_orig
+    ,aut.AUTOR.txt_tipo_prpi
+    ,aut.AUTOR.txt_part_cnto_trci
+    ,aut.AUTOR.nom_enlv --Nome do envolvido 
+    FROM cad_filtrado AS cad
+    CROSS JOIN UNNEST (cad.autores) WITH ORDINALITY aut(AUTOR, n) 
+),
+
+ARRAY_AUTOR AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN nom_atr_prin IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN cod_cfcj IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN des_perf_atr IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN dat_nasc IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN part_cnto_tstm IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_drta IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_moti_reit IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN crgo_part_cnto IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_moti_reit IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN dat_reit IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN part_cnto_drge_sind IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN des_stat_cola IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN cod_empr IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN nom_enlv IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN txt_part_cnto_trci IS NOT NULL THEN 2 ELSE 0 END
+      ]) AS ARRAY_CAMPOS_AUTOR,
+      idt_unic_cada,
+      idt_unic_caso
+    FROM campos_autor
+),
+
+CONTA_CAMPOS_AUTOR AS (
+    SELECT 
+      idt_unic_caso,
+      idt_unic_cada,
+      cardinality(filter(ARRAY_CAMPOS_AUTOR, x -> x IN (1,2))) AS campos_preenchidos_autor,
+      cardinality(filter(ARRAY_CAMPOS_AUTOR, x -> x = 1)) AS campos_automaticos_autor
+    FROM ARRAY_AUTOR
+),
+
+AGRUPA_POR_CAD_AUTOR AS (
+    SELECT 
+       idt_unic_caso,
+       idt_unic_cada,
+       SUM(campos_preenchidos_autor) AS campos_preenchidos_autor,
+       SUM(campos_automaticos_autor) AS campos_automaticos_autor
+    FROM CONTA_CAMPOS_AUTOR
+    GROUP BY idt_unic_caso, idt_unic_cada
+),
+
+campos_advogado AS (
+    SELECT    
+      cad.idt_unic_cada
+      ,cad.idt_unic_caso
+      ,cad.dat_hor_ulti_alte_cada_prso_juri
+      ,adv.ADVOGADO.ind_agsr --Tratasse de agressor já está 
+      ,adv.ADVOGADO.sig_uf_orde_advo_bras_advo_part_cnto --UF da OAB já está 
+      ,adv.ADVOGADO.cod_advo
+      ,adv.ADVOGADO.nom_advo --Nome advogado já está 
+    FROM cad_filtrado AS cad
+    CROSS JOIN UNNEST (cad.advogados) WITH ORDINALITY adv(ADVOGADO, n) 
+),
+
+ARRAY_ADVOGADO AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN ind_agsr IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN sig_uf_orde_advo_bras_advo_part_cnto IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN cod_advo IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN nom_advo IS NOT NULL THEN 1 ELSE 0 END
+      ]) AS ARRAY_CAMPOS_ADVOGADO,
+      idt_unic_cada,
+      idt_unic_caso
+    FROM campos_advogado
+),
+
+CONTA_CAMPOS_ADVOGADO AS (
+    SELECT 
+      idt_unic_caso,
+      idt_unic_cada,
+      cardinality(filter(ARRAY_CAMPOS_ADVOGADO, x -> x IN (1,2))) AS campos_preenchidos_advogado,
+      cardinality(filter(ARRAY_CAMPOS_ADVOGADO, x -> x = 1)) AS campos_automaticos_advogado
+    FROM ARRAY_ADVOGADO
+),
+
+AGRUPA_POR_CAD_ADVOGADO AS (
+    SELECT 
+       idt_unic_caso,
+       idt_unic_cada,
+       SUM(campos_preenchidos_advogado) AS campos_preenchidos_advogado,
+       SUM(campos_automaticos_advogado) AS campos_automaticos_advogado
+    FROM CONTA_CAMPOS_ADVOGADO
+    GROUP BY idt_unic_caso, idt_unic_cada
+),
+
+campos_audiencias AS (
+    SELECT    
+      cad.idt_unic_cada,
+      cad.idt_unic_caso,
+      cad.dat_hor_ulti_alte_cada_prso_juri,
+    aud.AUDIENCIA.txt_plat_utla_fdbk,
+  aud.AUDIENCIA.txt_fort_audi_fdbk,
+  aud.AUDIENCIA.txt_tipo_audi_fdbk,
+  aud.AUDIENCIA.sig_uf_orde_advo_bras_rspl_fdbk,
+  aud.AUDIENCIA.cod_orde_advo_bras,
+  aud.AUDIENCIA.cod_advo_rspl_fdbk,
+  aud.AUDIENCIA.sig_uf_orde_advo_bras_audi,
+  aud.AUDIENCIA.cod_orde_advo_bras_audi,
+  aud.AUDIENCIA.cod_advo_audi, --advogado audiencista já está 
+  aud.AUDIENCIA.txt_plat_utla,
+  aud.AUDIENCIA.des_stat_fase_prso_juri, --Situação da audiência
+  aud.AUDIENCIA.num_prco_plat_exto,
+  aud.AUDIENCIA.txt_fort_audi, --formato da audiencia já esta 
+  aud.AUDIENCIA.dat_hor_audi_prso_juri, --Data e hora da audiencia já está 
+  aud.AUDIENCIA.dat_audi_antr, --Data da audiência anterior a data atual? já está 
+  aud.AUDIENCIA.idt_dat_audi, --Possui data de audiencia? já está 
+  aud.AUDIENCIA.des_tipo_audi, -- Tipo de audiencia já esta 
+  aud.AUDIENCIA.txt_unid_ppto,  
+  aud.AUDIENCIA.des_situ_audi
+    FROM cad_filtrado AS cad
+    CROSS JOIN UNNEST (cad.audiencias) WITH ORDINALITY aud(AUDIENCIA, n) 
+),
+
+ARRAY_AUDIENCIAS AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN txt_plat_utla_fdbk IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_fort_audi_fdbk IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_tipo_audi_fdbk IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN sig_uf_orde_advo_bras_rspl_fdbk IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN part_cnto_tstm IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN cod_advo_audi IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN txt_plat_utla IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN des_stat_fase_prso_juri IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN num_prco_plat_exto IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN txt_fort_audi IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN dat_hor_audi_prso_juri IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN dat_audi_antr IS NOT NULL THEN 21 ELSE 0 END,
+      CASE WHEN idt_dat_audi IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN des_tipo_audi IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN txt_unid_ppto IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN des_situ_audi IS NOT NULL THEN 2 ELSE 0 END
+      ]) AS ARRAY_CAMPOS_AUDIENCIA,
+      idt_unic_cada,
+      idt_unic_caso
+    FROM campos_audiencias
+),
+
+CONTA_CAMPOS_AUDIENCIA AS (
+    SELECT 
+      idt_unic_caso,
+      idt_unic_cada,
+      cardinality(filter(ARRAY_CAMPOS_AUDIENCIA, x -> x IN (1,2))) AS campos_preenchidos_audiencia,
+      cardinality(filter(ARRAY_CAMPOS_AUDIENCIA, x -> x = 1)) AS campos_automaticos_audiencia
+    FROM ARRAY_AUDIENCIAS
+),
+
+AGRUPA_POR_CAD_AUDIENCIA AS (
+    SELECT 
+       idt_unic_caso,
+       idt_unic_cada,
+       SUM(campos_preenchidos_audiencia) AS campos_preenchidos_audiencia,
+       SUM(campos_automaticos_audiencia) AS campos_automaticos_audiencia
+    FROM CONTA_CAMPOS_AUDIENCIA
+    GROUP BY idt_unic_caso, idt_unic_cada
+)
+
+
+SELECT
+cad.idt_unic_cada,
+cad.idt_unic_caso,
+(reu.campos_preenchidos_reu + autor.campos_preenchidos_autor + advogado.campos_preenchidos_advogado + aud.campos_preenchidos_audiencia) as total_preenchido,
+(reu.campos_automaticos_reu + autor.campos_automaticos_autor + advogado.campos_automaticos_advogado + aud.campos_automaticos_audiencia) as total_automatico
+FROM cad_filtrado
+LEFT JOIN AGRUPA_POR_CAD_REU as reu ON cad.idt_unic_cada = reu.idt_unic_cada  AND cad.idt_unic_caso = reu.idt_unic_caso
+LEFT JOIN AGRUPA_POR_CAD_AUTOR as autor ON cad.idt_unic_cada = autor.idt_unic_cada  AND cad.idt_unic_caso = autor.idt_unic_caso
+LEFT JOIN AGRUPA_POR_CAD_ADVOGADO as advogado ON cad.idt_unic_cada = advogado.idt_unic_cada  AND cad.idt_unic_caso = advogado.idt_unic_caso
+LEFT JOIN AGRUPA_POR_CAD_AUDIENCIA as aud ON cad.idt_unic_cada = aud.idt_unic_cada  AND cad.idt_unic_caso = aud.idt_unic_caso
+
+'''
+workgroup = 'analytics-workgroup'
+db = "workspace_db" # Database destino
+
+---------------------------------------------------------------------------------------------------------
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_objetos_arrays = wr.athena.read_sql_query(
+ sql=query_objetos_arrays,
+ database=db,
+ workgroup=workgroup
+)
+---------------------------------------------------------------------------------------------------------
+
+#DEIXA TUDO EM STRING PARA EVITAR PROBLEMAS 
+schema = StructType([
+    StructField(col_name, StringType(), True) 
+    for col_name in df_objetos_arrays.columns
+])  
+
+---------------------------------------------------------------------------------------------------------
+# Converter para DataFrame
+df_objetos_arrays = spark.createDataFrame(df_objetos_arrays,schema)
+---------------------------------------------------------------------------------------------------------
+
+query_cadastro_padrao = '''
+ WITH TABELA_CAMPOS AS ( SELECT
+cad.num_prso        
+,def.num_prso as num_prso_def
+,cad.idt_unic_cada  
+,cad.idt_unic_caso  
+,cad.nom_crtr_prso_juri
+,cad.nom_comr_prso_juri  
+,cad.dat_audi_prso_juri  
+,cad.dat_cita_noti    
+,cad.dat_ajui_prso_juri  
+,cad.dat_hor_audi_prso_juri  
+,cad.nom_ista_juri  
+,cad.nom_orgo_lega  
+,cad.ind_limr_prco_juri  
+,cad.des_tipo_acao_prso_juri  
+,cad.cod_tipo_orgo_lega_prso  
+,cad.ind_assn_snsl  
+,cad.sg_uf    
+,cad.vlr_caus        
+,cad.nom_cria_cada_prso_juri      
+,cad.dat_hor_disi_trno    
+,cad.dat_hor_trno_prso_juri    
+,cad.dat_hor_finz_cada_prso_juri    
+,cad.dat_hor_cria_cada_prso_juri  
+,cad.dat_hor_ulti_alte_cada_prso_juri
+,cad.nom_empr_ulti_alte    
+,cad.des_erro_trno_sist_lgdo    
+,cad.nom_grup_trat_ulti_alte     
+,cad.nom_ulti_alte_cada_prso_juri      
+,cad.num_past_lgdo     
+,cad.num_prco_docm_juri      
+,cad.nom_rspl_cada_prso_juri    
+,cad.des_stat_fase_prso_juri     
+,cad.des_situ_trno_sist_lgdo     
+,cad.des_atr_recl_nega      
+,cad.des_info_atr_rcre    
+,cad.nom_macr_crtr     
+,cad.des_natz_dano_prso    
+,cad.ind_rela_lgpd     
+,cad.ind_atr_rcre     
+,def.dat_limi_ated_prco_juri   
+,cad.des_moti_trno  
+,def.ind_prso_juri_rcbo_apla     
+,cad.ind_trav_etre_etap     
+--,aud.AUDIENCIA.txt_fort_audi   
+--,aud.AUDIENCIA.des_tipo_audi  
+--,aud.AUDIENCIA.idt_dat_audi  
+--,aud.AUDIENCIA.dat_audi_antr  
+--,aud.AUDIENCIA.cod_advo_audi  
+--,aut.AUTOR.nom_enlv  
+--,aut.AUTOR.des_perf_atr   
+--,aut.AUTOR.cod_cfcj   
+--,aut.AUTOR.dat_nasc    
+--,adv.ADVOGADO.nom_advo  
+--,adv.ADVOGADO.sig_uf_orde_advo_bras_advo_part_cnto    
+--,adv.ADVOGADO.ind_agsr    
+,org.ORGAO.des_orgo    
+,org.ORGAO.nom_orgo_inrn     
+,org.ORGAO.txt_tipo_orgo   
+,org.ORGAO.txt_orgo     
+,esc.ESCRITORIO.cod_esci_crcd
+,ped.PEDIDO.nom_pedi_prso AS pedido
+,ped.PEDIDO.ind_pedi_prin AS pedido_principal
+,ped.PEDIDO.idt_unic_pedi
+,ped.PEDIDO.dat_hor_ulti_alte_cada_prso_juri
+,ROW_NUMBER() OVER (PARTITION BY cad.idt_unic_cada ORDER BY ped.PEDIDO.dat_hor_ulti_alte_cada_prso_juri DESC) AS rn_pedido
+,ROW_NUMBER() OVER(PARTITION BY cad.idt_unic_cada, cad.num_prso ORDER BY cad.dat_hor_ulti_alte_cada_prso_juri DESC ) AS rn_cad
+,cad.ano_mes_dia_rfrc
+FROM "db_corp_juridico_esteiradofuturo_sor_01"."iaas_salesforce_cada_received" AS cad
+LEFT JOIN "db_corp_juridico_esteiradofuturo_sor_01"."iaas_salesforce_ettg_civl_received" as def ON cad.num_prso = def.num_prso
+CROSS JOIN UNNEST (cad.pedidos) WITH ORDINALITY ped(PEDIDO, n)
+LEFT JOIN UNNEST (cad.audiencias) WITH ORDINALITY aud(AUDIENCIA, n) ON TRUE
+LEFT JOIN UNNEST (cad.autores) WITH ORDINALITY aut(AUTOR, n) ON TRUE
+LEFT JOIN UNNEST (cad.advogados) WITH ORDINALITY adv(ADVOGADO, n) ON TRUE
+LEFT JOIN UNNEST (cad.orgaos) WITH ORDINALITY org(ORGAO, n) ON TRUE 
+LEFT JOIN UNNEST (cad.escritorios) WITH ORDINALITY esc(ESCRITORIO, n) ON TRUE 
+WHERE 1=1 
+AND date_parse(substr(cad.dat_hor_cria_cada_prso_juri, 1, 10),'%d/%m/%Y') >= TIMESTAMP '2024-01-01 00:00:00'
+AND cad.nom_crtr_prso_juri in ('IC','Veículos Contra Cobrança','Serviços Bancários', 'DCR PF CONTRA COBRANÇA', 'Fraudes e Ilícitos')
+AND cad.ano_mes_dia_rfrc NOT IN (20250724,20250613,20250520,20250215,20241015,20241111,20241113,20241203,20241204,20241205,20241209)
+--AND cad.idt_unic_cada IN ('CAD-000222641','CAD-000223026','CAD-000225236')
+)
+
+,ARRAY_CADASTRO_PADRAO AS (
+SELECT
+idt_unic_cada,
+idt_unic_caso,
+nom_crtr_prso_juri,
+dat_hor_cria_cada_prso_juri,
+month(date_parse(substr(dat_hor_cria_cada_prso_juri, 1, 10),'%d/%m/%Y')) as mes_entrada,
+year(date_parse(substr(dat_hor_cria_cada_prso_juri, 1, 10),'%d/%m/%Y')) as ano_entrada,
+dat_hor_finz_cada_prso_juri,
+month(date_parse(substr(dat_hor_finz_cada_prso_juri, 1, 10),'%d/%m/%Y')) as mes_finalizacao,
+year(date_parse(substr(dat_hor_finz_cada_prso_juri, 1, 10),'%d/%m/%Y')) as ano_finalizacao,
+  des_moti_trno,
+  coalesce(dat_hor_trno_prso_juri,dat_hor_disi_trno) as data_transbordo,
+(ARRAY[
+CASE WHEN nom_crtr_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Carteira
+CASE WHEN nom_comr_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Comarca
+CASE WHEN cod_cfcj IS NOT NULL THEN 1 ELSE NULL END, --CPF/CNPJ
+CASE WHEN dat_audi_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Data da Audiência
+CASE WHEN dat_cita_noti IS NOT NULL THEN 1 ELSE NULL END, --Data da Citação
+CASE WHEN dat_ajui_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Data de Ajuizamento
+--CASE WHEN dat_hor_audi_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Data e Hora da Audiência
+--CASE WHEN txt_fort_audi IS NOT NULL THEN 1 ELSE NULL END, --Formato da Audiência
+CASE WHEN nom_ista_juri IS NOT NULL THEN 1 ELSE NULL END, --Instância
+--CASE WHEN nom_advo IS NOT NULL THEN 1 ELSE NULL END, --Nome do Advogado
+--CASE WHEN nom_enlv IS NOT NULL THEN 1 ELSE NULL END, --Nome do Envolvido
+CASE WHEN num_prso IS NOT NULL THEN 1 ELSE NULL END, --Número do Processo
+CASE WHEN nom_orgo_lega IS NOT NULL THEN 1 ELSE NULL END, --Órgão Legal
+CASE WHEN ind_limr_prco_juri IS NOT NULL THEN 1 ELSE NULL END, --Possui Liminar?
+CASE WHEN des_tipo_acao_prso_juri IS NOT NULL THEN 1 ELSE NULL END, --Tipo de Ação
+--CASE WHEN des_tipo_audi IS NOT NULL THEN 1 ELSE NULL END, --Tipo de Audiência
+CASE WHEN cod_tipo_orgo_lega_prso IS NOT NULL THEN 1 ELSE NULL END, --Tipo de Órgão Legal
+CASE WHEN ind_assn_snsl IS NOT NULL THEN 1 ELSE NULL END, --Trata-se de assunto sensível
+CASE WHEN sg_uf IS NOT NULL THEN 1 ELSE NULL END, --UF
+--CASE WHEN sig_uf_orde_advo_bras_advo_part_cnto IS NOT NULL THEN 1 ELSE NULL END, --UF da OAB
+CASE WHEN vlr_caus IS NOT NULL THEN 1 ELSE NULL END, --Valor da Causa
+
+--sistemicos considerados na contagem = 4, sistemicos nao considerados = 5
+CASE WHEN idt_unic_cada IS NOT NULL THEN 5 ELSE NULL END, --Cadastro
+CASE WHEN idt_unic_caso IS NOT NULL THEN 5 ELSE NULL END, --Caso
+CASE WHEN nom_cria_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Criado por
+CASE WHEN dat_hor_cria_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Data da Entrada
+CASE WHEN dat_hor_finz_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Data da Finalização
+CASE WHEN dat_hor_cria_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Data do Cadastro
+CASE WHEN dat_hor_disi_trno IS NOT NULL THEN 4 ELSE NULL END, --Data Disponível Transbordo
+CASE WHEN dat_hor_trno_prso_juri IS NOT NULL THEN 4 ELSE NULL END, --Data do Transbordo
+CASE WHEN nom_empr_ulti_alte IS NOT NULL THEN 5 ELSE NULL END, --Empresa do Último Modificador
+CASE WHEN des_erro_trno_sist_lgdo IS NOT NULL THEN 5 ELSE NULL END, --Erro Transbordo
+CASE WHEN nom_grup_trat_ulti_alte IS NOT NULL THEN 5 ELSE NULL END, --Grupo de Tratamento Último Modificador
+CASE WHEN nom_ulti_alte_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Modificado pela última vez por
+CASE WHEN num_past_lgdo IS NOT NULL THEN 5 ELSE NULL END, --Número da Pasta do Legado
+CASE WHEN num_prco_docm_juri IS NOT NULL THEN 5 ELSE NULL END, --Número Protocolo
+CASE WHEN nom_orgo_inrn IS NOT NULL THEN 4 ELSE NULL END, --Órgão Interno Name
+CASE WHEN nom_rspl_cada_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Responsável pela Finalização
+CASE WHEN des_stat_fase_prso_juri IS NOT NULL THEN 5 ELSE NULL END, --Status da Fase
+CASE WHEN des_situ_trno_sist_lgdo IS NOT NULL THEN 4 ELSE NULL END, --Status Transbordo
+
+CASE WHEN des_atr_recl_nega IS NOT NULL THEN 2 ELSE NULL END, --Autor reclama de negativação?
+--CASE WHEN dat_nasc IS NOT NULL THEN 2 ELSE NULL END, --Data de Nascimento    
+CASE WHEN des_info_atr_rcre IS NOT NULL THEN 2 ELSE NULL END, --Informações do Autor Reincidente   
+CASE WHEN nom_macr_crtr IS NOT NULL THEN 2 ELSE NULL END, --Macro Carteira
+CASE WHEN des_natz_dano_prso IS NOT NULL THEN 2 ELSE NULL END, --Natureza do Dano
+--CASE WHEN des_perf_atr IS NOT NULL THEN 2 ELSE NULL END, --Perfil do autor
+CASE WHEN ind_rela_lgpd IS NOT NULL THEN 2 ELSE NULL END, --Reclamação está relacionada com a LGPD?  
+
+--CASE WHEN cod_advo_audi IS NOT NULL THEN 3 ELSE NULL END, --Advogado Audiencista
+--CASE WHEN nom_enlv IS NOT NULL THEN 3 ELSE NULL END, --Autor Principal
+CASE WHEN ind_atr_rcre IS NOT NULL THEN 3 ELSE NULL END, --Autor Reincidente?    
+--CASE WHEN dat_audi_antr IS NOT NULL THEN 3 ELSE NULL END, --Data da audiência anterior a data atual?
+CASE WHEN dat_limi_ated_prco_juri IS NOT NULL THEN 3 ELSE NULL END, --Data limite do Processo
+CASE WHEN des_orgo IS NOT NULL THEN 3 ELSE NULL END, --Descrição do Órgão
+CASE WHEN cod_esci_crcd IS NOT NULL THEN 3 ELSE NULL END, --Escritório credenciado
+CASE WHEN des_moti_trno IS NOT NULL THEN 3 ELSE NULL END, --Motivo do Transbordo
+CASE WHEN txt_orgo IS NOT NULL THEN 3 ELSE NULL END, --Órgãos
+--CASE WHEN idt_dat_audi IS NOT NULL THEN 3 ELSE NULL END, --Possui data da audiência?
+CASE WHEN txt_tipo_orgo IS NOT NULL THEN 3 ELSE NULL END, --Tipo
+--CASE WHEN ind_agsr IS NOT NULL THEN 3 ELSE NULL END, --Trata-se de agressor
+CASE WHEN ind_prso_juri_rcbo_apla IS NOT NULL THEN 3 ELSE NULL END, --Trata-se de APP?    
+CASE WHEN ind_trav_etre_etap IS NOT NULL THEN 3 ELSE NULL END --Tratativa cadastro + solicitação
+]) AS colunas
+FROM TABELA_CAMPOS
+WHERE 1=1 
+AND rn_cad = 1
+),
+
+
+SELECT 
+idt_unic_caso,
+idt_unic_cada,
+nom_crtr_prso_juri,
+dat_hor_cria_cada_prso_juri,
+mes_entrada,
+ano_entrada,
+dat_hor_finz_cada_prso_juri,
+mes_finalizacao,
+ano_finalizacao,
+cardinality(filter(colunas,x -> x in (1,2,3,4))) AS campos_preenchidas_padrao,
+cardinality(filter(colunas, x -> x in (2,3,4))) AS campos_automaticas_padrao,
+data_transbordo,
+des_moti_trno
+FROM ARRAY_CADASTRO_PADRAO
+'''
+workgroup = 'analytics-workgroup'
+db = "workspace_db" # Database destino
+
+---------------------------------------------------------------------------------------------------------
+
+# Executa a consulta SQL no Athena e carrega os dados como DataFrame
+df_cadastro_padrao = wr.athena.read_sql_query(
+ sql=query_cadastro_padrao,
+ database=db,
+ workgroup=workgroup
+)
+---------------------------------------------------------------------------------------------------------
+
+#DEIXA TUDO EM STRING PARA EVITAR PROBLEMAS 
+schema = StructType([
+    StructField(col_name, StringType(), True) 
+    for col_name in df_cadastro_padrao.columns
+])  
+
+---------------------------------------------------------------------------------------------------------
+# Converter para DataFrame
+df_cadastro_padrao = spark.createDataFrame(df_cadastro_padrao,schema)
+---------------------------------------------------------------------------------------------------------
+#JOIN
+
+df_cadastro_join = (
+    df_cadastro_padrao.alias("a")
+    .join(df_objetos_arrays.alias("b"), F.col("a.idt_unic_cada") == F.col("b.idt_unic_cada"), "left")
+    .select(
+        F.col("a.idt_unic_cada"),
+        F.col("a.nom_crtr_prso_juri"),
+        F.col("a.dat_hor_cria_cada_prso_juri"),
+        F.col("a.mes_entrada"),
+        F.col("a.ano_entrada"),
+        F.col("a.dat_hor_finz_cada_prso_juri"),
+        F.col("a.mes_finalizacao"),
+        F.col("a.ano_finalizacao"),
+        F.col("a.campos_preenchidas_padrao"),
+        F.col("a.campos_automaticas_padrao"),
+        F.col("a.data_transbordo"),
+        F.col("a.des_moti_trno"),
+        F.col("b.idt_unic_cada"),
+        F.col("b.total_preenchido"),
+        F.col("b.total_automatico")
+    )
+)
+
+
+
+
