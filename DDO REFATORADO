@@ -267,19 +267,23 @@ for regra in regras:
     dt_limite = regra["data"]
     
     for col_check in colunas:
-        cond_col = F.when(
-            (F.col(col_check).isNotNull()) &
-            (F.col("nom_crtr_prso_juri") == regra["carteira"]) &
-            (F.col("ex3_complemento_do_pedido").isin(regra["ex3_complemento_do_pedido"])) &
-            (F.col("dt_criacao") >= F.lit(regra["data"])),
-            F.lit(1)
-        ).when(
-            F.col(col_check).isNotNull(),
-            F.lit(2)
-        ).otherwise(F.lit(0))
-
-        # aqui tem que estar no mesmo nível do cond_col
-        df_flags = df_flags.withColumn(f"flag_{col_check}", cond_col)
+      for col_check in colunas:
+          cond_col = F.when(
+              (F.col(col_check).isNotNull()) &
+              (F.col(col_check) != "") &
+              (F.length(F.trim(F.col(col_check))) > 0) &
+              (F.col("nom_crtr_prso_juri") == regra["carteira"]) &
+              (F.col("ex3_complemento_do_pedido").isin(regra["ex3_complemento_do_pedido"])) &
+              (F.col("dt_criacao") >= F.lit(regra["data"])),
+              F.lit(1)
+          ).when(
+              (F.col(col_check).isNotNull()) &
+              (F.col(col_check) != "") &
+              (F.length(F.trim(F.col(col_check))) > 0),
+              F.lit(2)
+          ).otherwise(F.lit(0))
+      
+          df_flags = df_flags.withColumn(f"flag_{col_check}", cond_col)
 
 # Somar as flags para gerar "automatica" e "manual"
 # Forma correta usando soma de colunas PySpark
