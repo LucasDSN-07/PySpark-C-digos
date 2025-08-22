@@ -1,113 +1,125 @@
-CONFIGURAÇÃO GLUE 
-%idle_timeout 29  #tempo em minutos que a sessão pode ficar ociosa antes de ser encerrada automaticamente
-%glue_version 4.0  # VERSÃO DO Glue
-%worker_type G.1X  #Define o tipo de worker (máquina que roda seu job)
-%number_of_workers 2   #Quantidade de workers que serão usados no Cluster
-%region sa-east-1
-%security_config authorized-security-configuration
-%connections analytics-glue-connection-aza, analytics-glue-connection-azc
-%additional_python_modules awswrangler, boto3, numpy==1.21.0  #Bibliotecas adicionais para usar
+SELECT  
+    CAST(NULLIF(cad.ex3_carteira_label, '') AS VARCHAR) AS ex3_carteira_label,
+    CAST(NULLIF(cad.ex3_carteira, '') AS VARCHAR) AS ex3_carteira,
+    CAST(NULLIF(cad.name, '') AS VARCHAR) AS idt_unic_cada,
+    CAST(NULLIF(cad.ex3_numero_protocolo, '') AS VARCHAR) AS ex3_numero_protocolo_cad,
 
-import sys
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from awsglue import DynamicFrame 
+    CAST(NULLIF(ddo.ex3_caso, '') AS VARCHAR) AS caso,
+    CAST(NULLIF(ddo.name, '') AS VARCHAR) AS idt_unic_ddo,
+    CAST(NULLIF(ddo.ex3_complemento_do_pedido, '') AS VARCHAR) AS ex3_complemento_do_pedido,
+    CAST(NULLIF(ddo.ex3_numero_da_pasta_origem_da_demanda, '') AS VARCHAR) AS ex3_numero_da_pasta_origem_da_demanda,
+    CAST(NULLIF(ddo.ex3_numero_protocolo, '') AS VARCHAR) AS ex3_numero_protocolo,
+    CAST(NULLIF(ddo.ex3_pedidos_do_processo, '') AS VARCHAR) AS ex3_pedidos_do_processo,
+    CAST(NULLIF(ddo.ex3_reclamacao_se_refere_ao_produto_iti, '') AS VARCHAR) AS ex3_reclamacao_se_refere_ao_produto_iti,
+    CAST(NULLIF(ddo.ex3_ade, '') AS VARCHAR) AS ex3_ade,
+    CAST(NULLIF(ddo.ex3_agencia, '') AS VARCHAR) AS ex3_agencia,
+    CAST(NULLIF(ddo.ex3_agencia_conta_digital, '') AS VARCHAR) AS ex3_agencia_conta_digital,
+    CAST(NULLIF(ddo.ex3_agencia_de_saque_da_op, '') AS VARCHAR) AS ex3_agencia_de_saque_da_op,
+    CAST(NULLIF(ddo.ex3_agencia_recebedora, '') AS VARCHAR) AS ex3_agencia_recebedora,
+    CAST(NULLIF(ddo.ex3_alega_que_nao_movimentou_conta_no_re, '') AS VARCHAR) AS ex3_alega_que_nao_movimentou_conta_no_re,
+    CAST(NULLIF(ddo.ex3_analise_da_reclamacao, '') AS VARCHAR) AS ex3_analise_da_reclamacao,
+    CAST(NULLIF(ddo.ex3_ano_de_fabricacao, '') AS DOUBLE) AS ex3_ano_de_fabricacao,
+    CAST(NULLIF(ddo.ex3_ano_modelo, '') AS DOUBLE) AS ex3_ano_modelo,
+    CAST(NULLIF(ddo.ex3_autor_possui_conta_no_itau, '') AS VARCHAR) AS ex3_autor_possui_conta_no_itau,
+    CAST(NULLIF(ddo.ex3_banco, '') AS VARCHAR) AS ex3_banco,
+    CAST(NULLIF(ddo.ex3_banco_recebedor, '') AS VARCHAR) AS ex3_banco_recebedor,
+    CAST(NULLIF(ddo.ex3_canal_de_contratacao, '') AS VARCHAR) AS ex3_canal_de_contratacao,
+    CAST(NULLIF(ddo.ex3_canal_de_formalizacao, '') AS VARCHAR) AS ex3_canal_de_formalizacao,
+    CAST(NULLIF(ddo.ex3_causa_da_baixa_label, '') AS VARCHAR) AS ex3_causa_da_baixa_label,
+    CAST(NULLIF(ddo.ex3_chassi, '') AS VARCHAR) AS ex3_chassi,
+    CAST(NULLIF(ddo.ex3_cliente_afirma_querer_devolver_valor, '') AS VARCHAR) AS ex3_cliente_afirma_querer_devolver_valor,
+    CAST(NULLIF(ddo.ex3_cliente_depositou_valor_em_juizo, '') AS VARCHAR) AS ex3_cliente_depositou_valor_em_juizo,
+    CAST(NULLIF(ddo.ex3_cliente_informa_receber_notificacao, '') AS VARCHAR) AS ex3_cliente_informa_receber_notificacao,
+    CAST(NULLIF(ddo.ex3_codigo_da_loja, '') AS VARCHAR) AS ex3_codigo_da_loja,
+    CAST(NULLIF(ddo.ex3_conta, '') AS VARCHAR) AS ex3_conta,
+    CAST(NULLIF(ddo.ex3_status_da_conta, '') AS VARCHAR) AS ex3_status_da_conta,
+    CAST(NULLIF(ddo.ex3_conta_recebedora, '') AS VARCHAR) AS ex3_conta_recebedora,
+    CAST(NULLIF(ddo.ex3_convenio_pagador, '') AS VARCHAR) AS ex3_convenio_pagador,
+    CAST(NULLIF(ddo.ex3_data_da_baixa, '') AS DATE) AS ex3_data_da_baixa,
+    CAST(NULLIF(ddo.ex3_data_da_contratacao, '') AS DATE) AS ex3_data_da_contratacao,
+    CAST(NULLIF(ddo.ex3_data_da_primeira_cobranca, '') AS DATE) AS ex3_data_da_primeira_cobranca,
+    CAST(NULLIF(ddo.ex3_data_da_ultima_cobranca, '') AS DATE) AS ex3_data_da_ultima_cobranca,
+    CAST(NULLIF(ddo.ex3_data_da_ultima_movimentacao, '') AS DATE) AS ex3_data_da_ultima_movimentacao,
+    CAST(NULLIF(ddo.ex3_data_da_ultima_renovacao, '') AS DATE) AS ex3_data_da_ultima_renovacao,
+    CAST(NULLIF(ddo.ex3_data_do_cad_regime_de_encerramento, '') AS DATE) AS ex3_data_do_cad_regime_de_encerramento,
+    CAST(NULLIF(ddo.ex3_numero_do_contrato_anterior, '') AS VARCHAR) AS ex3_numero_do_contrato_anterior,
+    CAST(NULLIF(ddo.ex3_data_do_encerramento, '') AS DATE) AS ex3_data_do_encerramento,
+    CAST(NULLIF(ddo.ex3_data_do_fato_gerador, '') AS DATE) AS ex3_data_do_fato_gerador,
+    CAST(NULLIF(ddo.ex3_data_do_valor_liberado, '') AS DATE) AS ex3_data_do_valor_liberado,
+    CAST(NULLIF(ddo.ex3_data_vencimento_da_1_parcela, '') AS DATE) AS ex3_data_vencimento_da_1_parcela,
+    CAST(NULLIF(ddo.ex3_descreva, '') AS VARCHAR) AS ex3_descreva,
+    CAST(NULLIF(ddo.ex3_descreva_tipo_de_baixa, '') AS VARCHAR) AS ex3_descreva_tipo_de_baixa,
+    CAST(NULLIF(ddo.ex3_descricao_da_empresa, '') AS VARCHAR) AS ex3_descricao_da_empresa,
+    CAST(NULLIF(ddo.ex3_digitador_bloqueado, '') AS VARCHAR) AS ex3_digitador_bloqueado,
+    CAST(NULLIF(ddo.createddate, '') AS TIMESTAMP) AS createddate,
+    CAST(NULLIF(ddo.ex3_forma_da_liberacao_do_credito, '') AS VARCHAR) AS ex3_forma_da_liberacao_do_credito,
+    CAST(NULLIF(ddo.ex3_forma_de_pagamento_das_parcelas, '') AS VARCHAR) AS ex3_forma_de_pagamento_das_parcelas,
+    CAST(NULLIF(ddo.ex3_houve_desconto_no_beneficio, '') AS VARCHAR) AS ex3_houve_desconto_no_beneficio,
+    CAST(NULLIF(ddo.ex3_houve_liberacao_do_credito, '') AS VARCHAR) AS ex3_houve_liberacao_do_credito,
+    CAST(NULLIF(ddo.ex3_houve_renovacao_do_seguro, '') AS VARCHAR) AS ex3_houve_renovacao_do_seguro,
+    CAST(NULLIF(ddo.ex3_houve_troco_label, '') AS VARCHAR) AS ex3_houve_troco_label,
+    CAST(NULLIF(ddo.identificada_baixa_escabin, '') AS VARCHAR) AS identificada_baixa_escabin,
+    CAST(NULLIF(ddo.ex3_juros_requeridos_label, '') AS VARCHAR) AS ex3_juros_requeridos_label,
+    CAST(NULLIF(ddo.ex3_marca, '') AS VARCHAR) AS ex3_marca,
+    CAST(NULLIF(ddo.ex3_matricula, '') AS VARCHAR) AS ex3_matricula,
+    CAST(NULLIF(ddo.ex3_tipo_de_contrato, '') AS VARCHAR) AS ex3_tipo_de_contrato,
+    CAST(NULLIF(ddo.ex3_modelo, '') AS VARCHAR) AS ex3_modelo,
+    CAST(NULLIF(ddo.ex3_motivador_do_cancelamento, '') AS VARCHAR) AS ex3_motivador_do_cancelamento,
+    CAST(NULLIF(ddo.ex3_motivo_da_reclamacao_label, '') AS VARCHAR) AS ex3_motivo_da_reclamacao_label,
+    CAST(NULLIF(ddo.ex3_nome_da_loja, '') AS VARCHAR) AS ex3_nome_da_loja,
+    CAST(NULLIF(ddo.ex3_numero_conta_digital, '') AS VARCHAR) AS ex3_numero_conta_digital,
+    CAST(NULLIF(ddo.ex3_numero_da_apolice, '') AS VARCHAR) AS ex3_numero_da_apolice,
+    CAST(NULLIF(ddo.ex3_numero_da_op, '') AS VARCHAR) AS ex3_numero_da_op,
+    CAST(NULLIF(ddo.ex3_numero_da_operacao_anterior, '') AS VARCHAR) AS ex3_numero_da_operacao_anterior,
+    CAST(NULLIF(ddo.ex3_numero_da_proposta, '') AS VARCHAR) AS ex3_numero_da_proposta,
+    CAST(NULLIF(ddo.ex3_numero_do_cheque, '') AS VARCHAR) AS ex3_numero_do_cheque,
+    CAST(NULLIF(ddo.ex3_numero_da_operacao_contrato, '') AS VARCHAR) AS ex3_numero_da_operacao_contrato,
+    CAST(NULLIF(ddo.n_mero_do_novo_contrato_refinancimento, '') AS VARCHAR) AS n_mero_do_novo_contrato_refinancimento,
+    CAST(NULLIF(ddo.ex3_numero_da_operacao, '') AS VARCHAR) AS ex3_numero_da_operacao,
+    CAST(NULLIF(ddo.ex3_ocorrencia_com_debito_aut_trata_de, '') AS VARCHAR) AS ex3_ocorrencia_com_debito_aut_trata_de,
+    CAST(NULLIF(ddo.ex3_origem_do_contrato_label, '') AS VARCHAR) AS ex3_origem_do_contrato_label,
+    CAST(NULLIF(ddo.ex3_origem_do_encerramento, '') AS VARCHAR) AS ex3_origem_do_encerramento,
+    CAST(NULLIF(ddo.ex3_placa, '') AS VARCHAR) AS ex3_placa,
+    CAST(NULLIF(ddo.ex3_produto_reclamado_label, '') AS VARCHAR) AS ex3_produto_reclamado_label,
+    CAST(NULLIF(ddo.ex3_produto_tarifa_reclamada_label, '') AS VARCHAR) AS ex3_produto_tarifa_reclamada_label,
+    CAST(NULLIF(ddo.ex3_qual_canal_foi_feita_a_formalizacao, '') AS VARCHAR) AS ex3_qual_canal_foi_feita_a_formalizacao,
+    CAST(NULLIF(ddo.ex3_qual_empresa_label, '') AS VARCHAR) AS ex3_qual_empresa_label,
+    CAST(NULLIF(ddo.ex3_qual_o_pacote_reclamado, '') AS VARCHAR) AS ex3_qual_o_pacote_reclamado,
+    CAST(NULLIF(ddo.ex3_quantidade_de_contratos, '') AS DOUBLE) AS ex3_quantidade_de_contratos,
+    CAST(NULLIF(ddo.ex3_quantidade_de_parcelas, '') AS DOUBLE) AS ex3_quantidade_de_parcelas,
+    CAST(NULLIF(ddo.ex3_quantidade_de_parcelas_pagas, '') AS DOUBLE) AS ex3_quantidade_de_parcelas_pagas,
+    CAST(NULLIF(ddo.ex3_reclama_de_venda_casada_subordinada, '') AS VARCHAR) AS ex3_reclama_de_venda_casada_subordinada,
+    CAST(NULLIF(ddo.ex3_reclamacao_envolve_conta_digital, '') AS VARCHAR) AS ex3_reclamacao_envolve_conta_digital,
+    CAST(NULLIF(ddo.ex3_renavam, '') AS VARCHAR) AS ex3_renavam,
+    CAST(NULLIF(ddo.ex3_uf_placa, '') AS VARCHAR) AS ex3_uf_placa,
+    CAST(NULLIF(ddo.ex3_seguro_contestado_label, '') AS VARCHAR) AS ex3_seguro_contestado_label,
+    CAST(NULLIF(ddo.ex3_seguro_protecao_financeira, '') AS VARCHAR) AS ex3_seguro_protecao_financeira,
+    CAST(NULLIF(ddo.ex3_seguro_reclamado_label, '') AS VARCHAR) AS ex3_seguro_reclamado_label,
+    CAST(NULLIF(ddo.ex3_status_da_conta_do_terceiro_label, '') AS VARCHAR) AS ex3_status_da_conta_do_terceiro_label,
+    CAST(NULLIF(ddo.ex3_status_da_op_label, '') AS VARCHAR) AS ex3_status_da_op_label,
+    CAST(NULLIF(ddo.ex3_status_do_cheque_label, '') AS VARCHAR) AS ex3_status_do_cheque_label,
+    CAST(NULLIF(ddo.ex3_status_do_contrato_v2_label, '') AS VARCHAR) AS ex3_status_do_contrato_v2_label,
+    CAST(NULLIF(ddo.ex3_status_do_contrato, '') AS VARCHAR) AS ex3_status_do_contrato,
+    CAST(NULLIF(ddo.ex3_status_do_servico_na_data_apuracao, '') AS VARCHAR) AS ex3_status_do_servico_na_data_apuracao,
+    CAST(NULLIF(ddo.ex3_tarifas_requeridas_label, '') AS VARCHAR) AS ex3_tarifas_requeridas_label,
+    CAST(NULLIF(ddo.ex3_tipo_de_baixa_label, '') AS VARCHAR) AS ex3_tipo_de_baixa_label,
+    CAST(NULLIF(ddo.ex3_tipo_de_conta_do_terceiro_label, '') AS VARCHAR) AS ex3_tipo_de_conta_do_terceiro_label,
+    CAST(NULLIF(ddo.ex3_tipo_de_contrato_label, '') AS VARCHAR) AS ex3_tipo_de_contrato_label,
+    CAST(NULLIF(ddo.ex3_trata_se_de_contrato_cedido, '') AS VARCHAR) AS ex3_trata_se_de_contrato_cedido,
+    CAST(NULLIF(ddo.ex3_trata_se_de_perda_de_isencao, '') AS VARCHAR) AS ex3_trata_se_de_perda_de_isencao,
+    CAST(NULLIF(ddo.ex3_tratou_se_de_portabilidade, '') AS VARCHAR) AS ex3_tratou_se_de_portabilidade,
+    CAST(NULLIF(ddo.ex3_ultimo_contrato_reclamado_refin, '') AS VARCHAR) AS ex3_ultimo_contrato_reclamado_refin,
+    CAST(NULLIF(ddo.ex3_valor_da_contratacao_com_encargos, '') AS DOUBLE) AS ex3_valor_da_contratacao_com_encargos,
+    CAST(NULLIF(ddo.ex3_valor_da_parcela, '') AS DOUBLE) AS ex3_valor_da_parcela,
+    CAST(NULLIF(ddo.ex3_valor_da_primeira_cobranca, '') AS DOUBLE) AS ex3_valor_da_primeira_cobranca,
+    CAST(NULLIF(ddo.ex3_valor_da_ultima_cobranca, '') AS DOUBLE) AS ex3_valor_da_ultima_cobranca,
+    CAST(NULLIF(ddo.ex3_valor_do_novo_contrato_refinanc, '') AS DOUBLE) AS ex3_valor_do_novo_contrato_refinanc,
+    CAST(NULLIF(ddo.ex3_valor_liberado_para_refin, '') AS DOUBLE) AS ex3_valor_liberado_para_refin,
+    CAST(NULLIF(ddo.ex3_valor_liberado_creditado, '') AS DOUBLE) AS ex3_valor_liberado_creditado,
+    CAST(NULLIF(ddo.ex3_valor_total_das_parcelas_pagas, '') AS DOUBLE) AS ex3_valor_total_das_parcelas_pagas
 
-# args = getResolvedOptions(sys.argv, ["SESSION_ID"])
-sc = SparkContext.getOrCreate()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-
-
-
-
-import re
-import json
-import datetime
-import locale
-import awswrangler as wr
-import pandas as pd
-import boto3
-from itertools import product
-from pyspark.sql import functions as F
-from pyspark.sql import SparkSession
-from pyspark.sql.window import Window
-from awsglue.transforms import Filter
-from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
-from pyspark.sql.functions import col, from_json, explode, when, udf, regexp_replace, lit, concat_ws, collect_list, array_distinct, array
-
-
-
-
-
-
-
-
-# LER A TABELA DE DADOS DIRETAMENTE PELO GLUE
-datasource = glueContext.create_dynamic_frame.from_catalog(
-  database="db_corp_juridico_esteiradofuturo_sor_01",
-  table_name="tbex3861_itgr_resu_qstr_jgle",
-  transformation_ctx="datasource"
-)
-
-
-# Converter para DataFrame
-df = datasource.toDF()
-
-
-#CÓDIGO PARA SALVAR TABELA
-dados_primarios_final_.write.format("parquet").mode("overwrite").saveAsTable("workspace_db.dados_primarios")
-
-
-
-
-query_bj_one = '''with andamentos_bj as (
-select cdpasta,
-nrandam,
-codtpand,
-cddetand,
-trim(txnovand) andamento,
-trim(txdetand) detalhe_andamento,
-cast(date_parse(cast(dtandame as varchar), '%Y%m%d') as date) dtandame,
-dtalinic,
-case
-when dtandvlr = 0 then null else cast(
-date_parse(cast(dtandvlr as varchar), '%Y%m%d') as date
-)
-end dtand_vlr
-from "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjapr0"
-where trim(txnovand) in ('SOLICITACAO PARA ANALISE DE DECISAO')
-and trim(txdetand) in ('ACORDO')
-),
-docs_bj as (
-select ima.cdpasta,
-ima.dtalinic dt_doc_bj,
-cla.nom_claf_docm nome_documento,
-andbj.andamento andamento_bj,
-andbj.detalhe_andamento detalhe_andamento_bj,
-andbj.dtandame,
-andbj.dtand_vlr
-from "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjima0" ima
-left join "db_corp_juridico_juridicodadoslegados_sor_01"."tbbjcla0" cla on ima.cod_tipo_claf_docm = cla.cod_tipo_claf_docm
-inner join andamentos_bj andbj on ima.cdpasta = andbj.cdpasta
-and ima.nrandam = andbj.nrandam
-order by ima.cdpasta
-)
-select dbj.*, pro.nr_processo nr_processo_one
-from docs_bj dbj
-left join "db_corp_juridico_juridicodadoslegados_spec_01"."tb_pco_bi_processos" pro on cast(dbj.cdpasta as varchar) = pro.cd_pasta'''
-workgroup = 'analytics-workgroup'
-db = "workspace_db" # Database destino
-
-
-
-# Executa a consulta SQL no Athena e carrega os dados como DataFrame
-df_bj_one = wr.athena.read_sql_query(
-  sql=query_bj_one,
-  database=db,
-  workgroup=workgroup
-)
+FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_dados_da_operacao_hist" ddo
+LEFT JOIN "database_db_compartilhado_consumer_workflowjuridico"."ex3_cadastro_hist" cad 
+    ON ddo.ex3_numero_protocolo = cad.ex3_numero_protocolo
+WHERE YEAR(ddo.createddate) >= 2024
+  AND cad.ex3_macro_carteira = '1'
