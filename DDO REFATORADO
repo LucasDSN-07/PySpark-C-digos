@@ -287,7 +287,7 @@ regras = [
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento"],
+        "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento","ex3_status_do_contrato"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP'],
         "data": "2025-03-29 00:00:00"
@@ -301,7 +301,7 @@ regras = [
     {
         "colunas": [
                     "ex3_data_da_contratacao","ex3_agencia","ex3_banco","ex3_conta","ex3_data_do_valor_liberado","ex3_forma_da_liberacao_do_credito","ex3_houve_desconto_no_beneficio","ex3_houve_liberacao_do_credito","ex3_matricula"
-                    ,"ex3_nome_da_loja","ex3_quantidade_de_parcelas","ex3_quantidade_de_parcelas_pagas","ex3_valor_da_parcela","ex3_valor_da_contratacao_com_encargos","ex3_valor_do_novo_contrato_refinanc","ex3_valor_liberado_para_refin","ex3_valor_liberado_creditado","ex3_valor_retido_para_quita_o_de_refin"],
+                    ,"ex3_nome_da_loja","ex3_quantidade_de_parcelas","ex3_quantidade_de_parcelas_pagas","ex3_valor_da_parcela","ex3_valor_da_contratacao_com_encargos","ex3_valor_do_novo_contrato_refinanc","ex3_valor_liberado_para_refin","ex3_valor_liberado_creditado","ex3_valor_retido_para_quita_o_de_refin_label"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade'],
         "data": "2025-03-29 00:00:00"
@@ -313,7 +313,19 @@ regras = [
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["identificada_baixa_escabin","ex3_digitador_bloqueado","ex3_cliente_afirma_querer_devolver_valor","ex3_cliente_depositou_valor_em_juizo"],
+        "colunas": ["ex3_agencia_de_saque_da_op","ex3_numero_da_op","ex3_status_da_op_label"],
+        "carteira": "IC",
+        "ex3_complemento_do_pedido": ['Contrato OP'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["ex3_status_do_cheque_label","ex3_numero_do_cheque"],
+        "carteira": "IC",
+        "ex3_complemento_do_pedido": ['Contrato Cheque'],
+        "data": "2025-03-29 00:00:00"
+    },
+    {
+        "colunas": ["identificada_baixa_escabin","ex3_digitador_bloqueado","ex3_cliente_afirma_querer_devolver_valor","ex3_cliente_depositou_valor_em_juizo","ex3_ade"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade','Proposta excluída'],
         "data": "2025-03-29 00:00:00"
