@@ -125,7 +125,7 @@ ex3_caso AS caso
 ,ex3_ocorrencia_com_debito_aut_trata_de   --Ocorrência com Débito Aut. se trata de
 ,ex3_origem_do_contrato_label   --Origem do Contrato
 ,ex3_origem_do_encerramento   --Origem do encerramento​
-,ex3_uf_placa   --Placa
+,ex3_placa   --Placa
 ,   --Problema Ocorrido
 ,ex3_produto_reclamado_label   --Produto reclamado
 ,ex3_produto_tarifa_reclamada_label   --Produto/tarifa reclamado
