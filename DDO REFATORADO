@@ -77,112 +77,112 @@ ddo.ex3_complemento_do_pedido,
 ddo.ex3_numero_da_pasta_origem_da_demanda,
 ddo.ex3_numero_protocolo,
 ddo.ex3_pedidos_do_processo,
-,ddo.ex3_ade   --ade
-,ddo.ex3_agencia  --Agência
-,ddo.ex3_agencia_conta_digital  --Agencia conta digital
-,ddo.ex3_agencia_de_saque_da_op   --Agência de Saque da OP
-,ddo.ex3_agencia_recebedora   --Agência recebedora​
-,ddo.ex3_alega_que_nao_movimentou_conta_no_re  --Alega que nao movimentou conta no RE
-,ddo.ex3_analise_administrativa   --Análise inicial de tratativa
-,ddo.ex3_analise_da_reclamacao  --Análise da Reclamação​
-,ddo.ex3_ano_de_fabricacao   --Ano Fabricação
-,ddo.ex3_ano_modelo   --Ano Modelo
-,ddo.ex3_autor_possui_conta_no_itau   --Autor possui conta no Itaú?​
-,ddo.ex3_banco   --Banco
-,ddo.ex3_banco_recebedor   --Banco recebedor​
-,ddo.ex3_canal_de_contratacao  --Canal de Contratação
-,ddo.ex3_canal_de_formalizacao   --Canal de Formalização
-,ddo.ex3_causa_da_baixa_label  --Causa da Baixa
-,ddo.ex3_chassi   --Chassi
-,ddo.ex3_cliente_afirma_querer_devolver_valor   --Cliente Afirma Querer Devolver Valor?
-,ddo.ex3_cliente_depositou_valor_em_juizo   --Cliente Depositou Valor em Juízo?
-,ddo.ex3_cliente_informa_receber_notificacao  --Cliente informa receber notificação?​
-,ddo.ex3_codigo_da_loja   --Código da loja
-,ddo.ex3_conta   --Conta
-,ddo.ex3_conta_recebedora   --Conta recebedora​
-,ddo.ex3_convenio_pagador   --Convênio pagador
-,ddo.ex3_data_da_baixa  --Data da baixa
-,ddo.ex3_data_da_baixa_da_operacao  --Data da baixa da operação
-,ddo.ex3_data_da_contratacao   --Data da contratação
-,ddo.ex3_data_da_primeira_cobranca  --Data da primeira cobrança
-,ddo.ex3_data_da_ultima_cobranca  --Data da ultima cobrança
-,ddo.ex3_data_da_ultima_movimentacao  --Data da ultima movimentacao
-,ddo.ex3_data_da_ultima_renovacao  --Data da ultima renovação
-,ddo.ex3_data_do_cad_regime_de_encerramento  --Data do cad. do regime de encerramento​
-,ddo.ex3_data_do_encerramento  --Data do encerramento
-,ddo.ex3_data_do_fato_gerador   --Data do fato gerador​
-,ddo.ex3_data_do_valor_liberado  --Data do Valor liberado
-,ddo.ex3_data_vencimento_da_1_parcela   --Data vencimento da 1ª parcela/parcela ún
-,ddo.ex3_descreva  --Descreva
-,ddo.ex3_descreva_tipo_de_baixa   --Descreva o tipo de baixa
-,ddo.ex3_descricao_da_empresa   --Descrição da empresa
-,ddo.ex3_digitador_bloqueado   --Digitador Bloqueado
-,ddo.ex3_forma_da_liberacao_do_credito   --Forma da liberação do Crédito
-,ddo.ex3_forma_de_pagamento_das_parcelas   --Forma de pagamento das parcelas​
-,ddo.ex3_houve_liberacao_do_credito  --Houve liberação do crédito?
-,ddo.ex3_houve_renovacao_do_seguro  --Houve renovação doSeguro
-,ddo.ex3_houve_troco_label  --Houve Troco
-,ddo.ex3_juros_requeridos_label   --Juros Requeridos
-,ddo.ex3_marca   --Marca
-,ddo.ex3_matricula   --Matrícula
-,ddo.ex3_modelo   --Modelo do Carro
-,ddo.ex3_motivador_do_cancelamento  --Motivador do cancelamento​
-,ddo.ex3_motivo_da_reclamacao_label  --Motivo da reclamação
-,ddo.ex3_nome_da_loja   --Nome da loja
-,ddo.ex3_numero_conta_digital  --Numero conta digital
-,ddo.ex3_numero_da_apolice  --Número da apolice
-,ddo.ex3_numero_da_op   --Numero da OP
-,ddo.ex3_numero_da_operacao  --Número da Operação
-,ddo.ex3_numero_da_operacao_anterior   --Número da Operação anterior
-,ddo.ex3_numero_da_operacao_contrato  --Número do Contrato
-,ddo.ex3_numero_da_proposta   --Número da proposta
-,ddo.ex3_numero_do_cheque   --Número do Cheque
-,ddo.ex3_numero_do_contrato_anterior   --Nº do contrato anterior 1
-,ddo.ex3_numero_do_contrato_anterior  --Data do contrato anterior 1
-,ddo.ex3_ocorrencia_com_debito_aut_trata_de  --Ocorrência com Débito Aut. se trata de
-,ddo.ex3_origem_do_contrato_label   --Origem do Contrato
-,ddo.ex3_origem_do_encerramento  --Origem do encerramento​
-,ddo.ex3_placa   --Placa
-,ddo.ex3_produto_reclamado_label   --Produto Reclamado​
-,ddo.ex3_produto_tarifa_reclamada_label  --Produto/tarifa reclamado
-,ddo.ex3_qual_canal_foi_feita_a_formalizacao  --Qual canal foi feita a formalização?
-,ddo.ex3_qual_empresa_label   --Qual empresa
-,ddo.ex3_qual_o_pacote_reclamado  --Qual o pacote reclamado
-,ddo.ex3_quantidade_de_contratos  --Quantidade de Contratos
-,ddo.ex3_quantidade_de_parcelas   --Quantidade de parcelas
-,ddo.ex3_quantidade_de_parcelas_pagas   --Quantidade de parcelas pagas
-,ddo.ex3_reclama_de_venda_casada_subordinada  --Reclama de venda casada/subordinada
-,ddo.ex3_reclamacao_envolve_conta_digital  --Reclamacao envolve conta digital
-,ddo.ex3_reclamacao_se_refere_ao_produto_iti  --A reclamação se refere ao produto ITI?​
-,ddo.ex3_renavam   --Renavam
-,ddo.ex3_seguro_contestado_label  --Seguro contestado
-,ddo.ex3_seguro_protecao_financeira   --Seguro Proteção Financeira
-,ddo.ex3_seguro_reclamado_label  --Seguro reclamado
-,ddo.ex3_status_da_conta  --Status da conta
-,ddo.ex3_status_da_op_label   --Status da OP
-,ddo.ex3_status_do_cheque_label   --Status do Cheque
-,ddo.ex3_status_do_contrato  --Status do Contrato
-,ddo.ex3_status_do_servico_na_data_apuracao  --Status do serviço na data da apuração​
-,ddo.ex3_tarifas_requeridas_label   --Tarifas Requeridas
-,ddo.ex3_tipo_de_baixa   --Tipo de baixa
-,ddo.ex3_tipo_de_conta_do_terceiro_label   --Tipo de Conta
-,ddo.ex3_tipo_de_contrato_label   --Tipo de contrato
-,ddo.ex3_trata_se_de_contrato_cedido   --Trata-se de Contrato Cedido?
-,ddo.ex3_trata_se_de_perda_de_isencao  --Trata-se de perde de isenção
-,ddo.ex3_tratou_se_de_portabilidade  --Tratou-se de portabilidade
-,ddo.ex3_uf_placa   --UF Placa
-,ddo.ex3_ultimo_contrato_reclamado_refin   --Último contrato reclamado refinanciado
-,ddo.ex3_valor_da_contratacao_com_encargos   --Valor da contratação com encargos
-,ddo.ex3_valor_da_parcela   --Valor da parcela
-,ddo.ex3_valor_da_primeira_cobranca  --Valor da primeira cobrança
-,ddo.ex3_valor_da_ultima_cobranca  --Valor da ultima cobrança
-,ddo.ex3_valor_do_novo_contrato_refinanc   --Valor do Novo Contrato (Refinancimento)
-,ddo.ex3_valor_liberado_creditado   --Valor liberado/creditado
-,ddo.ex3_valor_liberado_para_refin   --Valor liberado para Refin
-,ddo.ex3_valor_retido_para_quita_o_de_refin_label  --Valor retido para quitação de refin
-,ddo.ex3_valor_total_das_parcelas_pagas   --Valor total das parcelas pagas
-,ddo.identificada_baixa_escabin   --Identificada Baixa Escabin
-,ddo.n_mero_do_novo_contrato_refinancimento  --Número do Novo Contrato (Refinancimento)
+ddo.ex3_ade,   --ade
+ddo.ex3_agencia,  --Agência
+ddo.ex3_agencia_conta_digital,  --Agencia conta digital
+ddo.ex3_agencia_de_saque_da_op,  --Agência de Saque da OP
+ddo.ex3_agencia_recebedora,   --Agência recebedora​
+ddo.ex3_alega_que_nao_movimentou_conta_no_re,  --Alega que nao movimentou conta no RE
+ddo.ex3_analise_administrativa,   --Análise inicial de tratativa
+ddo.ex3_analise_da_reclamacao,  --Análise da Reclamação​
+ddo.ex3_ano_de_fabricacao,   --Ano Fabricação
+ddo.ex3_ano_modelo,   --Ano Modelo
+ddo.ex3_autor_possui_conta_no_itau,   --Autor possui conta no Itaú?​
+ddo.ex3_banco,   --Banco
+ddo.ex3_banco_recebedor,   --Banco recebedor​
+ddo.ex3_canal_de_contratacao,  --Canal de Contratação
+ddo.ex3_canal_de_formalizacao,   --Canal de Formalização
+ddo.ex3_causa_da_baixa_label,  --Causa da Baixa
+ddo.ex3_chassi,   --Chassi
+ddo.ex3_cliente_afirma_querer_devolver_valor,   --Cliente Afirma Querer Devolver Valor?
+ddo.ex3_cliente_depositou_valor_em_juizo,   --Cliente Depositou Valor em Juízo?
+ddo.ex3_cliente_informa_receber_notificacao,  --Cliente informa receber notificação?​
+ddo.ex3_codigo_da_loja,   --Código da loja
+ddo.ex3_conta,   --Conta
+ddo.ex3_conta_recebedora,   --Conta recebedora​
+ddo.ex3_convenio_pagador,   --Convênio pagador
+ddo.ex3_data_da_baixa,  --Data da baixa
+ddo.ex3_data_da_baixa_da_operacao,  --Data da baixa da operação
+ddo.ex3_data_da_contratacao,   --Data da contratação
+ddo.ex3_data_da_primeira_cobranca,  --Data da primeira cobrança
+ddo.ex3_data_da_ultima_cobranca,  --Data da ultima cobrança
+ddo.ex3_data_da_ultima_movimentacao,  --Data da ultima movimentacao
+ddo.ex3_data_da_ultima_renovacao,  --Data da ultima renovação
+ddo.ex3_data_do_cad_regime_de_encerramento,  --Data do cad. do regime de encerramento​
+ddo.ex3_data_do_encerramento,  --Data do encerramento
+ddo.ex3_data_do_fato_gerador,   --Data do fato gerador​
+ddo.ex3_data_do_valor_liberado,  --Data do Valor liberado
+ddo.ex3_data_vencimento_da_1_parcela,   --Data vencimento da 1ª parcela/parcela ún
+ddo.ex3_descreva,  --Descreva
+ddo.ex3_descreva_tipo_de_baixa,   --Descreva o tipo de baixa
+ddo.ex3_descricao_da_empresa,   --Descrição da empresa
+ddo.ex3_digitador_bloqueado,   --Digitador Bloqueado
+ddo.ex3_forma_da_liberacao_do_credito,   --Forma da liberação do Crédito
+ddo.ex3_forma_de_pagamento_das_parcelas,   --Forma de pagamento das parcelas​
+ddo.ex3_houve_liberacao_do_credito,  --Houve liberação do crédito?
+ddo.ex3_houve_renovacao_do_seguro,  --Houve renovação doSeguro
+ddo.ex3_houve_troco_label,  --Houve Troco
+ddo.ex3_juros_requeridos_label,   --Juros Requeridos
+ddo.ex3_marca,   --Marca
+ddo.ex3_matricula,   --Matrícula
+ddo.ex3_modelo,   --Modelo do Carro
+ddo.ex3_motivador_do_cancelamento,  --Motivador do cancelamento​
+ddo.ex3_motivo_da_reclamacao_label,  --Motivo da reclamação
+ddo.ex3_nome_da_loja,   --Nome da loja
+ddo.ex3_numero_conta_digital,  --Numero conta digital
+ddo.ex3_numero_da_apolice,  --Número da apolice
+ddo.ex3_numero_da_op,   --Numero da OP
+ddo.ex3_numero_da_operacao,  --Número da Operação
+ddo.ex3_numero_da_operacao_anterior,   --Número da Operação anterior
+ddo.ex3_numero_da_operacao_contrato,  --Número do Contrato
+ddo.ex3_numero_da_proposta,   --Número da proposta
+ddo.ex3_numero_do_cheque,   --Número do Cheque
+ddo.ex3_numero_do_contrato_anterior,   --Nº do contrato anterior 1
+ddo.ex3_numero_do_contrato_anterior,   --Data do contrato anterior 1
+ddo.ex3_ocorrencia_com_debito_aut_trata_de,  --Ocorrência com Débito Aut. se trata de
+ddo.ex3_origem_do_contrato_label,   --Origem do Contrato
+ddo.ex3_origem_do_encerramento,  --Origem do encerramento​
+ddo.ex3_placa,   --Placa
+ddo.ex3_produto_reclamado_label,   --Produto Reclamado​
+ddo.ex3_produto_tarifa_reclamada_label,  --Produto/tarifa reclamado
+ddo.ex3_qual_canal_foi_feita_a_formalizacao,  --Qual canal foi feita a formalização?
+ddo.ex3_qual_empresa_label,   --Qual empresa
+ddo.ex3_qual_o_pacote_reclamado,  --Qual o pacote reclamado
+ddo.ex3_quantidade_de_contratos,  --Quantidade de Contratos
+ddo.ex3_quantidade_de_parcelas,   --Quantidade de parcelas
+ddo.ex3_quantidade_de_parcelas_pagas,   --Quantidade de parcelas pagas
+ddo.ex3_reclama_de_venda_casada_subordinada,  --Reclama de venda casada/subordinada
+ddo.ex3_reclamacao_envolve_conta_digital,  --Reclamacao envolve conta digital
+ddo.ex3_reclamacao_se_refere_ao_produto_iti,  --A reclamação se refere ao produto ITI?​
+ddo.ex3_renavam,   --Renavam
+ddo.ex3_seguro_contestado_label,  --Seguro contestado
+ddo.ex3_seguro_protecao_financeira,   --Seguro Proteção Financeira
+ddo.ex3_seguro_reclamado_label,  --Seguro reclamado
+ddo.ex3_status_da_conta,  --Status da conta
+ddo.ex3_status_da_op_label,   --Status da OP
+ddo.ex3_status_do_cheque_label,   --Status do Cheque
+ddo.ex3_status_do_contrato,  --Status do Contrato
+ddo.ex3_status_do_servico_na_data_apuracao,  --Status do serviço na data da apuração​
+ddo.ex3_tarifas_requeridas_label,   --Tarifas Requeridas
+ddo.ex3_tipo_de_baixa,   --Tipo de baixa
+ddo.ex3_tipo_de_conta_do_terceiro_label,   --Tipo de Conta
+ddo.ex3_tipo_de_contrato_label,   --Tipo de contrato
+ddo.ex3_trata_se_de_contrato_cedido,   --Trata-se de Contrato Cedido?
+ddo.ex3_trata_se_de_perda_de_isencao,  --Trata-se de perde de isenção
+ddo.ex3_tratou_se_de_portabilidade,  --Tratou-se de portabilidade
+ddo.ex3_uf_placa,   --UF Placa
+ddo.ex3_ultimo_contrato_reclamado_refin,   --Último contrato reclamado refinanciado
+ddo.ex3_valor_da_contratacao_com_encargos,   --Valor da contratação com encargos
+ddo.ex3_valor_da_parcela,   --Valor da parcela
+ddo.ex3_valor_da_primeira_cobranca,  --Valor da primeira cobrança
+ddo.ex3_valor_da_ultima_cobranca,  --Valor da ultima cobrança
+ddo.ex3_valor_do_novo_contrato_refinanc,   --Valor do Novo Contrato (Refinancimento)
+ddo.ex3_valor_liberado_creditado,   --Valor liberado/creditado
+ddo.ex3_valor_liberado_para_refin,   --Valor liberado para Refin
+ddo.ex3_valor_retido_para_quita_o_de_refin_label,  --Valor retido para quitação de refin
+ddo.ex3_valor_total_das_parcelas_pagas,   --Valor total das parcelas pagas
+ddo.identificada_baixa_escabin,   --Identificada Baixa Escabin
+ddo.n_mero_do_novo_contrato_refinancimento   --Número do Novo Contrato (Refinancimento)
 FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_dados_da_operacao" as ddo
 LEFT JOIN cadastro as cad ON ddo.ex3_numero_protocolo = cad.ex3_numero_protocolo_cad
 WHERE 1=1 
