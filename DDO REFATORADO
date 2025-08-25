@@ -77,18 +77,6 @@ ddo.ex3_complemento_do_pedido,
 ddo.ex3_numero_da_pasta_origem_da_demanda,
 ddo.ex3_numero_protocolo,
 ddo.ex3_pedidos_do_processo,
-cad.ex3_carteira_label,
-cad.ex3_carteira,
-cad.idt_unic_cada,
-cad.data_do_cadastro,
-cad.ex3_numero_protocolo_cad,
-ddo.ex3_caso AS caso,
-ddo.name AS idt_unic_ddo,
-ROW_NUMBER() OVER(PARTITION BY ddo.name ORDER BY ddo.lastmodifieddate DESC) AS rn_ddo,
-ddo.ex3_complemento_do_pedido,
-ddo.ex3_numero_da_pasta_origem_da_demanda,
-ddo.ex3_numero_protocolo,
-ddo.ex3_pedidos_do_processo,
 ,ddo.ex3_ade   --ade
 ,ddo.ex3_agencia  --Agência
 ,ddo.ex3_agencia_conta_digital  --Agencia conta digital
