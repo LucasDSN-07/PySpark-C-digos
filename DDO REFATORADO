@@ -1,5 +1,6 @@
 #CONFIGURAÇÃO DO GLUE
-%idle_timeout 29   %glue_version 4.0  
+%idle_timeout 29  
+%glue_version 4.0  
 %worker_type G.1X  
 %number_of_workers 2  
 %region sa-east-1
@@ -31,6 +32,7 @@ from pyspark.sql.window import Window
 from awsglue.transforms import Filter
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType, TimestampType, DateType, IntegerType
 from pyspark.sql.functions import to_date, to_timestamp, date_format
+from functools import reduce
 
 ---------------------------------------------------------------------------------------------------------
 
@@ -187,6 +189,60 @@ df_ddo = spark.createDataFrame(df_ddo,schema)
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import StructType, StructField, StringType, TimestampType
+
+
+---------------------------------------------------------------------------------------------------------
+### FUNÇÃO PARA NORMALIZAR AS DATAS DE CADASTRO
+---------------------------------------------------------------------------------------------------------
+def normalizar_datas(df_ddo, col_data, formatos, nome_final="dt_cadastro_formatada"):
+    """
+    Normaliza uma coluna de datas para timestamp no formato Spark.
+
+    Args:
+        df: DataFrame Spark
+        col_data: nome da coluna original (string)
+        formatos: lista de strings com os formatos possíveis
+                  ex: ["yyyy-MM-dd HH:mm:ss", "dd/MM/yyyy HH:mm:ss"]
+        nome_final: nome da nova coluna criada
+
+    Retorna:
+        DataFrame com a nova coluna `nome_final` no tipo Timestamp
+    """
+    expr = None
+    for formato in formatos:
+        if expr is None:
+            expr = F.to_timestamp(F.col(col_data), formato)
+        else:
+            expr = F.coalesce(expr, F.to_timestamp(F.col(col_data), formato))
+
+-------------------------------------------------------------------------------------------------------------
+
+# formatos possíveis a receber
+formatos = [
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd HH:mm:ss.SSS",
+        "yyyy-MM-dd'T'HH:mm:ss",
+        "yyyy-MM-dd'T'HH:mm:ss.SSS",
+        "yyyy-MM-dd'T'HH:mm:ssX",         # Z, +hh, +hhmm, +hh:mm
+        "yyyy-MM-dd'T'HH:mm:ss.SSSX",     # com ms e fuso
+        "yyyy-MM-dd",
+        "dd-MM-yyyy",
+        "dd/MM/yyyy HH:mm:ss",
+        "dd/MM/yyyy",
+        "yyyy/MM/dd HH:mm:ss",
+        "yyyy/MM/dd",
+        "yyyy-MM-d"
+]
+
+df_ddo = normalizar_datas(df_ddo, "data_do_cadastro", formatos, "dt_cadastro_formatada")
+
+df_ddo.select("data_do_cadastro", "dt_cadastro_formatada").show(truncate=False)
+
+    return df_ddo.withColumn(nome_final, expr.cast(TimestampType()))
+
+
+---------------------------------------------------------------------------------------------------------
+### REGRAS PARA CONSIDERAR AUTOMATICO NA CONTAGEM
 ---------------------------------------------------------------------------------------------------------
 
 # Configuração das regras para identificar contagem de campos
@@ -230,7 +286,7 @@ regras = [
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["ex3_placa","ex3_renavam","ex3_uf_placa","ex3_modelo"."ex3_marca","ex3_ano_modelo","ex3_ano_de_fabricacao","ex3_data_da_contratacao","ex3_numero_da_proposta","ex3_chassi","ex3_numero_da_operacao","ex3_numero_da_operacao_contrato"],
+        "colunas": ["ex3_placa","ex3_renavam","ex3_uf_placa","ex3_modelo","ex3_marca","ex3_ano_modelo","ex3_ano_de_fabricacao","ex3_data_da_contratacao","ex3_numero_da_proposta","ex3_chassi","ex3_numero_da_operacao","ex3_numero_da_operacao_contrato"],
         "carteira": "Veículos Contra Cobrança",
         "ex3_complemento_do_pedido": ['Juros','Seguro Proteção Financeira','Ilegitimidade','Tarifa','Exibição de Documentos'],
         "data": "2024-09-27 00:00:00"
@@ -242,40 +298,65 @@ regras = [
         "data": "2024-12-09 00:00:00"
     },
 ]
+
+
+---------------------------------------------------------------------------------------------------------
+### SCRIPT PARA FAZER A CONTAGEM POR DDO
 ---------------------------------------------------------------------------------------------------------
 
-# Lista de todas as colunas de flags
-colunas_flags = [col for regra in regras for col in regra["colunas"]]
 
-# Criar as colunas de flag temporárias (1 e 2)
-df_flags = df_ddo
-for regra in regras:
-    colunas = regra["colunas"]
-    ex3_complemento_do_pedido_list = regra["ex3_complemento_do_pedido"]
-    dt_limite = regra["data"]
-    
-    for col_check in colunas:
-      for col_check in colunas:
-          cond_col = F.when(
-              (F.col(col_check).isNotNull()) &
-              (F.col(col_check) != "") &
-              (F.length(F.trim(F.col(col_check))) > 0) &
-              (F.col("nom_crtr_prso_juri") == regra["carteira"]) &
-              (F.col("ex3_complemento_do_pedido").isin(regra["ex3_complemento_do_pedido"])) &
-              (F.col("dt_criacao") >= F.lit(regra["data"])),
-              F.lit(1)
-          ).when(
-              (F.col(col_check).isNotNull()) &
-              (F.col(col_check) != "") &
-              (F.length(F.trim(F.col(col_check))) > 0),
-              F.lit(2)
-          ).otherwise(F.lit(0))
-      
-          df_flags = df_flags.withColumn(f"flag_{col_check}", cond_col)
+# iniciar colunas de contagem automáticas
+df_contagem_ddo = df_ddo
 
-# Somar as flags para gerar "automatica" e "manual"
-# Forma correta usando soma de colunas PySpark
-automatica_expr = sum(F.when(F.col(f"flag_{c}") == 1, 1).otherwise(0) for c in colunas_flags)
-manual_expr = sum(F.when(F.col(f"flag_{c}") == 2, 1).otherwise(0) for c in colunas_flags)
+for i, regra in enumerate(regras, start=1):
+    cols = [c for c in regra["colunas"] if c in df_contagem_ddo.columns]
 
-df_final = df_flags.withColumn("automatica", automatica_expr).withColumn("manual", manual_expr)
+    # para cada coluna, verificar se atende à regra
+    exprs = []
+    for c in cols:
+        expr = F.when(
+            (F.col("ex3_carteira_label") == regra["carteira"]) &
+            (F.col("ex3_complemento_do_pedido").isin(regra["ex3_complemento_do_pedido"])) &
+            (F.col("dt_cadastro_formatada") >= F.lit(regra["data"])) &
+            (F.col(c).isNotNull()),
+            1
+        ).otherwise(0)
+        exprs.append(expr)
+
+    # somar todas as colunas da regra
+    df_contagem_ddo = df_contagem_ddo.withColumn(f"flag_auto_{i}", sum(exprs))
+
+# somar todas as flags automáticas
+automatico_expr = sum(F.col(c) for c in df_contagem_ddo.columns if c.startswith("flag_auto_"))
+df_contagem_ddo = df_contagem_ddo.withColumn("automatico", automatico_expr)
+
+# contar todas as colunas preenchidas (preenchido)
+preenchido_expr = reduce(lambda x, y: x + F.when(F.col(y).isNotNull(), 1).otherwise(0), colunas_verificacao, F.lit(0))
+df_contagem_ddo = df_contagem_ddo.withColumn("preenchido", preenchido_expr)
+
+df_contagem_ddo.select(*df_ddo.columns, "automatico", "preenchido").show(truncate=False)
+
+
+---------------------------------------------------------------------------------------------------------------------------
+
+#FILTROS DE TESTE
+
+df_contagem_ddo.filter((F.col("idt_unic_cada") == "CADA_1326")).show()
+
+df_exemplo = df_contagem_ddo.select("idt_unic_cada","idt_unic_ddo","automatico","preenchido")
+
+df_exemplo.filter(F.col("idt_unic_cada") == "CADA_1942").show()
+
+
+---------------------------------------------------------------------------------------------------------
+### AGRUPANDO POR CAD E SUMARIZANDO OS DDO'S DO MESMO CAD
+---------------------------------------------------------------------------------------------------------
+
+teste_Agrupar = (
+  df_exemplo
+  .groupBy("idt_unic_cada")
+  .agg(
+      F.sum("automatico").alias("total_aut"),
+      F.sum("preenchido").alias("total_preenchido")
+      )
+)
