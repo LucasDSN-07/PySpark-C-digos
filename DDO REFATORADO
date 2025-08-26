@@ -287,20 +287,20 @@ regras = [
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento","ex3_status_do_contrato"],
+        "colunas": ["ex3_canal_de_contratacao","ex3_codigo_da_loja","n_mero_do_novo_contrato_refinancimento","ex3_status_do_contrato_label"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP'],
         "data": "2025-03-29 00:00:00"
     },
     {
-        "colunas": ["ex3_origem_do_contrato_label","ex3_numero_da_operacao_contrato","ex3_ultimo_contrato_reclamado_refin"],
+        "colunas": ["ex3_origem_do_contrato_label","ex3_numero_da_operacao_contrato","ex3_ultimo_contrato_reclamado_refin_label"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Contrato Cedido','Exibição de Documentos','Portabilidade'],
         "data": "2025-03-29 00:00:00"
     },
     {
         "colunas": [
-                    "ex3_data_da_contratacao","ex3_agencia","ex3_banco","ex3_conta","ex3_data_do_valor_liberado","ex3_forma_da_liberacao_do_credito","ex3_houve_desconto_no_beneficio","ex3_houve_liberacao_do_credito","ex3_matricula"
+                    "ex3_data_da_contratacao","ex3_agencia","ex3_banco","ex3_conta","ex3_data_do_valor_liberado","ex3_forma_da_liberacao_do_credito_label","ex3_houve_desconto_no_beneficio_label","ex3_houve_liberacao_do_credito_label","ex3_matricula"
                     ,"ex3_nome_da_loja","ex3_quantidade_de_parcelas","ex3_quantidade_de_parcelas_pagas","ex3_valor_da_parcela","ex3_valor_da_contratacao_com_encargos","ex3_valor_do_novo_contrato_refinanc","ex3_valor_liberado_para_refin","ex3_valor_liberado_creditado","ex3_valor_retido_para_quita_o_de_refin_label"],
         "carteira": "IC",
         "ex3_complemento_do_pedido": ['DOC/TED','Contrato Cheque','Contrato OP','Portabilidade'],
@@ -341,6 +341,31 @@ regras = [
         "carteira": "Veículos Contra Cobrança",
         "ex3_complemento_do_pedido": ['Juros','Seguro Proteção Financeira','Ilegitimidade','Tarifa','Exibição de Documentos'],
         "data": "2024-12-09 00:00:00"
+    },
+    {
+        "colunas": ["ex3_ade","ex3_data_da_contratacao","ex3_numero_da_operacao_contrato","ex3_produto_reclamado_label","ex3_tipo_de_baixa_label"],
+        "carteira": "DCR PF CONTRA COBRANÇA",
+        "ex3_complemento_do_pedido": ['REVISAO DE CLAUSULAS CONTRATUAIS','DIVERGENCIAS INFORM RELATORIOS BACEN (SCR OU CCS)','CONSIGNADO - DESCONTO ACIMA DE 30%'],
+        "data": "2025-08-15 00:00:00"
+    },
+    {
+        "colunas": ["ex3_houve_desconto_no_beneficio_label","ex3_ultimo_contrato_reclamado_refin_label"],
+        "carteira": "DCR PF CONTRA COBRANÇA",
+        "ex3_complemento_do_pedido": ['DIVERGENCIAS INFORM RELATORIOS BACEN (SCR OU CCS)'],
+        "data": "2025-08-15 00:00:00"
+    },
+    {
+        "colunas": ["ex3_data_da_baixa","ex3_descreva_tipo_de_baixa","ex3_status_do_contrato_label","ex3_data_da_contratacao"],
+        "carteira": "DCR PF CONTRA COBRANÇA",
+        "ex3_complemento_do_pedido": ['DIVERGENCIAS INFORM RELATORIOS BACEN (SCR OU CCS)','CONSIGNADO - DESCONTO ACIMA DE 30%'],
+        "data": "2025-08-15 00:00:00"
+    },
+    {
+        "colunas": ["ex3_agencia_recebedora","ex3_banco_recebedor","ex3_conta_recebedora","ex3_valor_da_op","ex3_status_do_contrato_label","ex3_ultimo_contrato_reclamado_refin_label","ex3_forma_da_liberacao_do_credito_label","ex3_houve_liberacao_do_credito_label","ex3_numero_do_cheque","ex3_quantidade_de_parcelas_pagas",
+"ex3_tipo_de_contrato_label","ex3_valor_da_contratacao_com_encargos","ex3_valor_da_parcela"],
+        "carteira": "DCR PF CONTRA COBRANÇA",
+        "ex3_complemento_do_pedido": ['CONSIGNADO - DESCONTO ACIMA DE 30%'],
+        "data": "2025-08-15 00:00:00"
     },
 ]
 
