@@ -362,7 +362,7 @@ regras = [
     },
     {
         "colunas": ["ex3_agencia_recebedora","ex3_banco_recebedor","ex3_conta_recebedora","ex3_valor_da_op","ex3_status_do_contrato_label","ex3_ultimo_contrato_reclamado_refin_label","ex3_forma_da_liberacao_do_credito_label","ex3_houve_liberacao_do_credito_label","ex3_numero_do_cheque","ex3_quantidade_de_parcelas_pagas",
-"ex3_tipo_de_contrato_label","ex3_valor_da_contratacao_com_encargos","ex3_valor_da_parcela"],
+                    "ex3_tipo_de_contrato_label","ex3_valor_da_contratacao_com_encargos","ex3_valor_da_parcela"],
         "carteira": "DCR PF CONTRA COBRANÇA",
         "ex3_complemento_do_pedido": ['CONSIGNADO - DESCONTO ACIMA DE 30%'],
         "data": "2025-08-15 00:00:00"
