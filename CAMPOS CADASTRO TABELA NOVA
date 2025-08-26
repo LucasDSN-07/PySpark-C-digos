@@ -1,23 +1,23 @@
 ,cad.ex3_carteira_label  --Carteira
 ,cad.ex3_comarca_pesquisa  --Comarca
-,cad.  --CPF/CNPJ
+--,cad.  --CPF/CNPJ
 ,cad.ex3_data_da_audiencia  --Data da Audiência
 ,cad.ex3_data_da_citacao_notificacao  --Data da Citação
 ,cad.ex3_data_de_ajuizamento  --Data de Ajuizamento
 ,cad.ex3_data_e_hora_da_audiencia  --Data e Hora da Audiência
-,cad.  --Formato da Audiência
+--,cad.  --Formato da Audiência
 ,cad.ex3_instancia_label  --Instância
-,cad.  --Nome do Advogado
+--,cad.  --Nome do Advogado
 ,cad.ex3_envolvido_autor  --Nome do Envolvido
 ,cad.ex3_numero_do_processo  --Número do Processo
 ,cad.ex3_tipo_de_orgao_legal_label  --Órgão Legal
 ,cad.ex3_possui_liminar_label  --Possui Liminar?
 ,cad.ex3_tipo_de_acao_label  --Tipo de Ação
-,cad.  --Tipo de Audiência
+--,cad.  --Tipo de Audiência
 ,cad.ex3_tipo_de_orgao_legal_label  --Tipo de Órgão Legal
 ,cad.ex3_trata_se_de_assunto_sens_vel_label  --Trata-se de assunto sensível
-,cad.  --UF
-,cad.  --UF da OAB
+--,cad.  --UF
+--,cad.  --UF da OAB
 ,cad.ex3_valor_da_causa  --Valor da Causa
 ,cad.name  --Cadastro
 ,cad.ex3_caso  --Caso
@@ -33,29 +33,29 @@
 ,cad.lastmodifiedbyid  --Modificado pela última vez por
 ,cad.ex3_numeropastabj  --Número da Pasta do Legado
 ,cad.ex3_numero_protocolo  --Número Protocolo
-,cad.  --Órgão Interno Name
+--,cad.  --Órgão Interno Name
 ,cad.ex3_responsavel_pela_finalizacao  --Responsável pela Finalização
 ,cad.ex3_status_label  --Status da Fase
 ,cad.ex3_status_transbordo_label  --Status Transbordo
 ,cad.ex3_autor_reclama_de_negativacao  --Autor reclama de negativação?
-,cad.  --Data de Nascimento    
+--,cad.  --Data de Nascimento    
 ,cad.ex3_autorreincidenteinformacoes  --Informações do Autor Reincidente   
 ,cad.ex3_macro_carteira_label  --Macro Carteira
 ,cad.ex3_natureza_do_dano_label  --Natureza do Dano
 ,cad.  --Perfil do autor
 ,cad.ex3_reclamacao_esta_relacionada_a_lgpd  --Reclamação está relacionada com a LGPD?  
-,cad.  --Advogado Audiencista
-,cad.  --Autor Principal
+--,cad.  --Advogado Audiencista
+--,cad.  --Autor Principal
 ,cad.ex3_autor_reincidente_na_mesma_carteira_label  --Autor Reincidente?    
-,cad.  --Data da audiência anterior a data atual?
+--,cad.  --Data da audiência anterior a data atual?
 ,cad.ex3_data_limite_do_processo  --Data limite do Processo
-,cad.  --Descrição do Órgão
-,cad.ex3_advogadoescritoriocredenciado_lookup  --Escritório credenciado
+--,cad.  --Descrição do Órgão
+--,cad.ex3_advogadoescritoriocredenciado_lookup  --Escritório credenciado
 ,cad.ex3_motivo_do_transbordo  --Motivo do Transbordo
-,cad.  --Órgãos
-,cad.  --Possui data da audiência?
-,cad.  --Tipo
-,cad.  --Trata-se de agressor
+--,cad.  --Órgãos
+--,cad.  --Possui data da audiência?
+--,cad.  --Tipo
+--,cad.  --Trata-se de agressor
 ,cad.ex3_trata_se_de_app  --Trata-se de APP?    
 ,cad.ex3_tratativa_entre_etapas  --Tratativa cadastro + solicitação
 ,cad.ex3_trata_se_de_portabilidade_por_fora_label  --Trata-se de portabilidade por fora?
