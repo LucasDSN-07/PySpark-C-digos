@@ -1,0 +1,486 @@
+WITH cadastro_unido as( SELECT
+cad.name,
+cad.ex3_carteira_label,
+cad.ex3_macro_carteira_label,
+cad.data_do_cadastro,
+cad.ex3_data_da_finalizacao,
+cad.ex3_numeropastabj,
+cad.ex3_numero_protocolo,
+cad.ex3_numero_do_processo,
+cad.ex3_motivo_do_transbordo_label,
+cad.ex3_caso,
+cad.lastmodifieddate,
+ROW_NUMBER() OVER(PARTITION BY cad.name ORDER BY cad.lastmodifieddate DESC) AS rn_cad
+FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_cadastro" as cad 
+WHERE 1=1 
+and year(cad.data_do_cadastro) >=2024
+and cad.ex3_status = 'Cadastrado'
+AND cad.ex3_carteira_label IN ('Serviços Bancários','IC','Veículos Contra Cobrança','DCR PF CONTRA COBRANÇA','Fraudes e Ilícitos')
+UNION ALL
+SELECT
+cad.name,
+cad.ex3_carteira_label,
+cad.ex3_macro_carteira_label,
+cad.data_do_cadastro,
+cad.ex3_data_da_finalizacao,
+cad.ex3_numeropastabj,
+cad.ex3_numero_protocolo,
+cad.ex3_numero_do_processo,
+cad.ex3_motivo_do_transbordo_label,
+cad.ex3_caso,
+cad.lastmodifieddate,
+ROW_NUMBER() OVER(PARTITION BY cad.name ORDER BY cad.lastmodifieddate DESC) AS rn_cad
+FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_cadastro_hist" as cad 
+WHERE 1=1 
+and year(cad.data_do_cadastro) >=2024
+--and cad.ex3_status = 'Cadastrado'
+AND cad.ex3_carteira_label IN ('Serviços Bancários','IC','Veículos Contra Cobrança','DCR PF CONTRA COBRANÇA','Fraudes e Ilícitos')
+),
+
+unicos as (
+SELECT  
+cad.name,
+cad.ex3_carteira_label,
+cad.ex3_macro_carteira_label,
+cad.data_do_cadastro,
+cad.ex3_data_da_finalizacao,
+cad.ex3_numeropastabj,
+cad.ex3_numero_protocolo,
+cad.ex3_numero_do_processo,
+cad.ex3_motivo_do_transbordo_label,
+cad.ex3_caso,
+cad.lastmodifieddate,
+ROW_NUMBER() OVER(PARTITION BY cad.name ORDER BY lastmodifieddate DESC) as rn_final
+FROM cadastro_unido as cad
+),
+
+cadastro_unido_final as (
+SELECT 
+cad.name,
+cad.ex3_carteira_label,
+cad.ex3_macro_carteira_label,
+cad.data_do_cadastro,
+cad.ex3_data_da_finalizacao,
+cad.ex3_numeropastabj,
+cad.ex3_numero_protocolo,
+cad.ex3_numero_do_processo,
+cad.ex3_motivo_do_transbordo_label,
+cad.ex3_caso,
+cad.lastmodifieddate
+FROM unicos as cad WHERE rn_final = 1
+),
+
+uniao_advogado as (
+SELECT 
+adv.id,
+adv.lastmodifieddate,
+ adv.name as advogado_nome, --Nome do Advogado
+ adv.ex3_caso as caso_adv,
+ adv.ex3_oab_externo, --OAB Externo
+ adv.ex3_oab, 
+ adv.ex3_trata_se_de_agressor, --Trata-se de agressor
+ adv.ex3_tipo_de_advogado_label, --Tipo de registro
+ ROW_NUMBER() OVER(PARTITION BY id ORDER BY lastmodifieddate DESC) as rn_adv
+ FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_advogado" as adv
+ UNION ALL 
+ SELECT
+ adv.id,
+adv.lastmodifieddate,
+ adv.name as advogado_nome, --Nome do Advogado
+ adv.ex3_caso as caso_adv,
+ adv.ex3_oab_externo, --OAB Externo
+ adv.ex3_oab, 
+ adv.ex3_trata_se_de_agressor, --Trata-se de agressor
+ adv.ex3_tipo_de_advogado_label, --Tipo de registro
+ ROW_NUMBER() OVER(PARTITION BY id ORDER BY lastmodifieddate DESC) as rn_adv
+ FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_advogado_hist" as adv
+),
+
+ultimo_adv as (
+SELECT  
+adv.id,
+adv.lastmodifieddate,
+ adv.advogado_nome, --Nome do Advogado
+ adv.caso_adv,
+ adv.ex3_oab_externo, --OAB Externo
+ adv.ex3_oab, 
+ adv.ex3_trata_se_de_agressor, --Trata-se de agressor
+ adv.ex3_tipo_de_advogado_label,
+ ROW_NUMBER() OVER(PARTITION BY adv.id ORDER BY adv.lastmodifieddate) as rn_adv_final
+ FROM uniao_advogado as adv
+ ),
+ 
+ final_adv as (
+ SELECT 
+ adv.id,
+adv.lastmodifieddate,
+ adv.advogado_nome, --Nome do Advogado
+ adv.caso_adv,
+ adv.ex3_oab_externo, --OAB Externo
+ adv.ex3_oab, 
+ adv.ex3_trata_se_de_agressor, --Trata-se de agressor
+ adv.ex3_tipo_de_advogado_label
+FROM ultimo_adv as adv 
+WHEre rn_adv_final = 1
+),
+
+campos_advogado as (
+SELECT 
+ cad.name, 
+ cad.ex3_carteira_label,
+cad.ex3_numeropastabj,
+ adv.advogado_nome, --Nome do Advogado
+ cad.ex3_caso as caso_cad,
+ adv.caso_adv,
+ adv.ex3_oab_externo, --OAB Externo
+ adv.ex3_oab, 
+ adv.ex3_trata_se_de_agressor, --Trata-se de agressor
+ adv.ex3_tipo_de_advogado_label --Tipo de registro
+FROM cadastro_unido_final as cad 
+LEFT JOIN final_adv as adv ON cad.ex3_caso = adv.caso_adv
+),
+
+
+array_adv AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN advogado_nome IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_oab_externo IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_oab IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_trata_se_de_agressor IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_tipo_de_advogado_label IS NOT NULL THEN 1 ELSE 0 END
+      ]) AS array_campos_adv,
+      name,
+      ex3_numeropastabj
+    FROM campos_advogado
+),
+
+conta_campos_advogado AS (
+    SELECT 
+      ex3_numeropastabj,
+      name,
+      cardinality(filter(array_campos_adv, x -> x IN (1,2))) AS campos_preenchidos_adv,
+      cardinality(filter(array_campos_adv, x -> x = 1)) AS campos_automaticos_adv
+    FROM array_adv
+),
+
+agrupa_por_cad_adv AS (
+    SELECT 
+       ex3_numeropastabj,
+       name,
+       SUM(campos_preenchidos_adv) AS campos_preenchidos_adv,
+       SUM(campos_automaticos_adv) AS campos_automaticos_adv
+    FROM conta_campos_advogado
+    GROUP BY ex3_numeropastabj, name
+)
+
+
+--------------------------------------------------------------------------
+ENVOLVIDO
+
+uniao_envolvido as (
+SELECT 
+env.id,
+env.lastmodifieddate,
+env.ex3_caso as caso_env,
+  env.name, --Nome do Envolvido
+  env.ex3_perfil_do_autor, --Perfil do autor
+  env.ex3_estado, --Estado
+  env.ex3_data_de_nascimento, --Data de Nascimento
+  env.ex3_cpf_cnpj_envolvido, --CPF / CNPJ
+  env.ex3_necessaria_reg_do_polo_passivo, --Necessária a reg. do polo passivo?
+  env.ex3_empresa_polo_desta_acao, --Empresa Pólo desta Ação
+ ROW_NUMBER() OVER(PARTITION BY id ORDER BY lastmodifieddate DESC) as rn_env
+ FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_envolvido" as env
+ UNION ALL 
+ SELECT
+env.id,
+env.lastmodifieddate,
+env.ex3_caso as caso_env,
+  env.name, --Nome do Envolvido
+  env.ex3_perfil_do_autor, --Perfil do autor
+  env.ex3_estado, --Estado
+  env.ex3_data_de_nascimento, --Data de Nascimento
+  env.ex3_cpf_cnpj_envolvido, --CPF / CNPJ
+  env.ex3_necessaria_reg_do_polo_passivo, --Necessária a reg. do polo passivo?
+  env.ex3_empresa_polo_desta_acao, --Empresa Pólo desta Ação
+ ROW_NUMBER() OVER(PARTITION BY id ORDER BY lastmodifieddate DESC) as rn_env
+ FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_envolvido_hist" as env
+),
+
+ultimo_env as (
+SELECT  
+env.id,
+env.lastmodifieddate,
+env.caso_env,
+  env.name, --Nome do Envolvido
+  env.ex3_perfil_do_autor, --Perfil do autor
+  env.ex3_estado, --Estado
+  env.ex3_data_de_nascimento, --Data de Nascimento
+  env.ex3_cpf_cnpj_envolvido, --CPF / CNPJ
+  env.ex3_necessaria_reg_do_polo_passivo, --Necessária a reg. do polo passivo?
+  env.ex3_empresa_polo_desta_acao, --Empresa Pólo desta Ação
+ ROW_NUMBER() OVER(PARTITION BY env.id ORDER BY env.lastmodifieddate) as rn_env_final
+ FROM uniao_envolvido as env
+ ),
+ 
+ final_env as (
+ SELECT 
+ env.id,
+env.lastmodifieddate,
+env.caso_env,
+  env.name, --Nome do Envolvido
+  env.ex3_perfil_do_autor, --Perfil do autor
+  env.ex3_estado, --Estado
+  env.ex3_data_de_nascimento, --Data de Nascimento
+  env.ex3_cpf_cnpj_envolvido, --CPF / CNPJ
+  env.ex3_necessaria_reg_do_polo_passivo, --Necessária a reg. do polo passivo?
+  env.ex3_empresa_polo_desta_acao, --Empresa Pólo desta Ação
+FROM ultimo_env as env 
+WHEre rn_env_final = 1
+),
+
+campos_envolvido as (
+SELECT 
+ cad.name, 
+ cad.ex3_carteira_label,
+cad.ex3_numeropastabj,
+ cad.ex3_caso as caso_cad,
+env.caso_env,
+ env.name as nome_envolvido, --Nome do Envolvido
+  env.ex3_perfil_do_autor, --Perfil do autor
+  env.ex3_estado, --Estado
+  env.ex3_data_de_nascimento, --Data de Nascimento
+  env.ex3_cpf_cnpj_envolvido, --CPF / CNPJ
+  env.ex3_necessaria_reg_do_polo_passivo, --Necessária a reg. do polo passivo?
+  env.ex3_empresa_polo_desta_acao, --Empresa Pólo desta Ação
+FROM cadastro_unido_final as cad 
+LEFT JOIN final_env as adv ON cad.ex3_caso = env.caso_env
+),
+
+array_env AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN nome_envolvido IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_perfil_do_autor IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_estado IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN ex3_cpf_cnpj_envolvido IS NOT NULL THEN 2 ELSE 0 END,
+      CASE WHEN ex3_data_de_nascimento IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_necessaria_reg_do_polo_passivo IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_empresa_polo_desta_acao IS NOT NULL THEN 1 ELSE 0 END
+      ]) AS array_campos_env,
+      name,
+      ex3_numeropastabj
+    FROM campos_envolvido
+),
+
+conta_campos_envolvido AS (
+    SELECT 
+      ex3_numeropastabj,
+      name,
+      cardinality(filter(array_campos_env, x -> x IN (1,2))) AS campos_preenchidos_env,
+      cardinality(filter(array_campos_env, x -> x = 1)) AS campos_automaticos_env
+    FROM array_env
+),
+
+agrupa_por_cad_env AS (
+    SELECT 
+       ex3_numeropastabj,
+       name,
+       SUM(campos_preenchidos_env) AS campos_preenchidos_env,
+       SUM(campos_automaticos_env) AS campos_automaticos_env
+    FROM conta_campos_envolvido
+    GROUP BY ex3_numeropastabj, name
+)
+
+--------------------------------------------------------------------------------------------------------------------------
+
+AUDIENCIA
+uniao_audiencia as (
+SELECT
+aud.name as idt_prazo,
+aud.lastmodifieddate,
+aud.ex3_numero_do_processo,
+aud.ex3_tipo_de_audiencia_label, --Tipo de Audiência
+aud.ex3_possui_data_audiencia_label, --Possui data da audiência?
+aud.ex3_data_e_hora_da_audiencia, --Data e Hora da Audiência
+aud.ex3_unidade_preposto_label, --Unidade Preposto
+aud.formato_da_audiencia_label, --Formato da audiencia
+aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
+aud.ex3_status_label, --Status da audiencia
+ ROW_NUMBER() OVER(PARTITION BY aud.name ORDER BY aud.lastmodifieddate DESC) as rn_aud
+ FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_prazo" as aud
+ UNION ALL 
+SELECT
+aud.name as idt_prazo,
+aud.lastmodifieddate,
+aud.ex3_numero_do_processo,
+aud.ex3_tipo_de_audiencia_label, --Tipo de Audiência
+aud.ex3_possui_data_audiencia_label, --Possui data da audiência?
+aud.ex3_data_e_hora_da_audiencia, --Data e Hora da Audiência
+aud.ex3_unidade_preposto_label, --Unidade Preposto
+aud.formato_da_audiencia_label, --Formato da audiencia
+aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
+aud.ex3_status_label, --Status da audiencia
+ ROW_NUMBER() OVER(PARTITION BY aud.name ORDER BY aud.lastmodifieddate DESC) as rn_aud
+ FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_prazo_hist" as aud
+),
+
+ultimo_aud as (
+SELECT  
+aud.idt_prazo,
+aud.lastmodifieddate,
+aud.ex3_numero_do_processo,
+aud.ex3_tipo_de_audiencia_label, --Tipo de Audiência
+aud.ex3_possui_data_audiencia_label, --Possui data da audiência?
+aud.ex3_data_e_hora_da_audiencia, --Data e Hora da Audiência
+aud.ex3_unidade_preposto_label, --Unidade Preposto
+aud.formato_da_audiencia_label, --Formato da audiencia
+aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
+aud.ex3_status_label, --Status da audiencia
+ ROW_NUMBER() OVER(PARTITION BY aud.idt_prazo ORDER BY aud.lastmodifieddate DESC) as rn_aud_final
+ FROM uniao_audiencia as aud
+ ),
+ 
+ final_aud as (
+ SELECT 
+aud.idt_prazo,
+aud.lastmodifieddate,
+aud.ex3_numero_do_processo,
+aud.ex3_tipo_de_audiencia_label, --Tipo de Audiência
+aud.ex3_possui_data_audiencia_label, --Possui data da audiência?
+aud.ex3_data_e_hora_da_audiencia, --Data e Hora da Audiência
+aud.ex3_unidade_preposto_label, --Unidade Preposto
+aud.formato_da_audiencia_label, --Formato da audiencia
+aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
+aud.ex3_status_label, --Status da audiencia
+FROM ultimo_aud as aud 
+WHEre rn_aud_final = 1
+),
+
+campos_audiencia as (
+SELECT 
+ cad.name, 
+ cad.ex3_carteira_label,
+cad.ex3_numeropastabj,
+ cad.ex3_numero_do_processo as numero_do_processo_cad,
+aud.idt_prazo,
+aud.ex3_numero_do_processo,
+aud.ex3_tipo_de_audiencia_label, --Tipo de Audiência
+aud.ex3_possui_data_audiencia_label, --Possui data da audiência?
+aud.ex3_data_e_hora_da_audiencia, --Data e Hora da Audiência
+aud.ex3_unidade_preposto_label, --Unidade Preposto
+aud.formato_da_audiencia_label, --Formato da audiencia
+aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
+aud.ex3_status_label, --Status da audiencia
+FROM cadastro_unido_final as cad 
+LEFT JOIN final_aud as aud ON cad.ex3_numero_do_processo = aud.ex3_numero_do_processo
+),
+
+array_aud AS (
+    SELECT 
+      (ARRAY[
+      CASE WHEN ex3_tipo_de_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_possui_data_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_data_e_hora_da_audiencia IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_unidade_preposto_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN formato_da_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_situacao_da_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_status_label IS NOT NULL THEN 1 ELSE 0 END
+      ]) AS array_campos_aud,
+      name,
+      ex3_numeropastabj
+    FROM campos_audiencia
+),
+
+conta_campos_audiencia AS (
+    SELECT 
+      ex3_numeropastabj,
+      name,
+      cardinality(filter(array_campos_aud, x -> x IN (1,2))) AS campos_preenchidos_aud,
+      cardinality(filter(array_campos_aud, x -> x = 1)) AS campos_automaticos_aud
+    FROM array_aud
+),
+
+agrupa_por_cad_aud AS (
+    SELECT 
+       ex3_numeropastabj,
+       name,
+       SUM(campos_preenchidos_aud) AS campos_preenchidos_aud,
+       SUM(campos_automaticos_aud) AS campos_automaticos_aud
+    FROM conta_campos_audiencia
+    GROUP BY ex3_numeropastabj, name
+)
+
+---------------------------------------------------------------------------------------------------------------------
+PEDIDOS
+
+uniao_pedido as (
+SELECT
+p.ex3_numero_pasta_bj,
+p.ex3_pedido_texto,
+p.ex3_complemento_pedido,
+p.lastmodifieddate as ultima_modificacao_ped,
+p.name as idt_pedido,
+ROW_NUMBER() OVER(PARTITION BY p.name ORDER BY p.lastmodifieddate DESC) as rn_pedido
+ FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_pedidos" as p
+ UNION ALL 
+SELECT
+p.ex3_numero_pasta_bj,
+p.ex3_pedido_texto,
+p.ex3_complemento_pedido,
+p.lastmodifieddate as ultima_modificacao_ped,
+p.name as idt_pedido,
+ROW_NUMBER() OVER(PARTITION BY p.name ORDER BY p.lastmodifieddate DESC) as rn_pedido
+ FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_pedidos_hist" as p
+),
+
+ultimo_ped as (
+SELECT  
+p.ex3_numero_pasta_bj,
+p.ex3_pedido_texto,
+p.ex3_complemento_pedido,
+p.ultima_modificacao_ped,
+p.idt_pedido,
+ ROW_NUMBER() OVER(PARTITION BY p.idt_pedido ORDER BY p.ultima_modificacao_ped DESC) as rn_pedido_final
+ FROM uniao_pedido as p
+ ),
+ 
+ final_ped as (
+ SELECT 
+p.ex3_numero_pasta_bj,
+p.ex3_pedido_texto,
+p.ex3_complemento_pedido,
+p.ultima_modificacao_ped,
+p.idt_pedido,
+FROM ultimo_ped as p 
+WHEre rn_pedido_final = 1
+),
+
+campos_pedido as (
+SELECT 
+ cad.name, 
+ cad.ex3_carteira_label,
+cad.ex3_numeropastabj,
+ cad.ex3_numero_do_processo as numero_do_processo_cad,
+p.ex3_numero_pasta_bj,
+p.ex3_pedido_texto,
+p.ex3_complemento_pedido,
+p.ultima_modificacao_ped,
+p.idt_pedido,
+FROM cadastro_unido_final as cad 
+LEFT JOIN final_ped as p on cad.ex3_numeropastabj = p.ex3_numero_pasta_bj
+),
+
+agrupa_por_cad_ped as (
+SELECT 
+  name,
+  ex3_carteira_label,
+ex3_numero_pasta_bj,
+COUNT(DISTINCT idt_pedido) as qntd_pedido,
+COUNT(DISTINCT idt_pedido) as qntd_complemento_pedido
+FROM campos_pedido
+GROUP BY name,ex3_carteira_label,ex3_numero_pasta_bj
+)
+
+
