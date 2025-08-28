@@ -308,6 +308,8 @@ aud.ex3_unidade_preposto_label, --Unidade Preposto
 aud.formato_da_audiencia_label, --Formato da audiencia
 aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
 aud.ex3_status_label, --Status da audiencia
+aud.ex3_advogado_audiencista, --Advogado audiencista
+aud.ex3_escritorio_credenciado, --Escritorio credenciado
  ROW_NUMBER() OVER(PARTITION BY aud.name ORDER BY aud.lastmodifieddate DESC) as rn_aud
  FROM "db_corp_juridico_esteiradofuturo_sor_01"."ex3_prazo" as aud
  UNION ALL 
@@ -322,6 +324,8 @@ aud.ex3_unidade_preposto_label, --Unidade Preposto
 aud.formato_da_audiencia_label, --Formato da audiencia
 aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
 aud.ex3_status_label, --Status da audiencia
+aud.ex3_advogado_audiencista, --Advogado audiencista
+aud.ex3_escritorio_credenciado, --Escritorio credenciado
  ROW_NUMBER() OVER(PARTITION BY aud.name ORDER BY aud.lastmodifieddate DESC) as rn_aud
  FROM "database_db_compartilhado_consumer_workflowjuridico"."ex3_prazo_hist" as aud
 ),
@@ -338,6 +342,8 @@ aud.ex3_unidade_preposto_label, --Unidade Preposto
 aud.formato_da_audiencia_label, --Formato da audiencia
 aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
 aud.ex3_status_label, --Status da audiencia
+aud.ex3_advogado_audiencista, --Advogado audiencista
+aud.ex3_escritorio_credenciado, --Escritorio credenciado
  ROW_NUMBER() OVER(PARTITION BY aud.idt_prazo ORDER BY aud.lastmodifieddate DESC) as rn_aud_final
  FROM uniao_audiencia as aud
  ),
@@ -354,6 +360,8 @@ aud.ex3_unidade_preposto_label, --Unidade Preposto
 aud.formato_da_audiencia_label, --Formato da audiencia
 aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
 aud.ex3_status_label, --Status da audiencia
+aud.ex3_advogado_audiencista, --Advogado audiencista
+aud.ex3_escritorio_credenciado --Escritorio credenciado
 FROM ultimo_aud as aud 
 WHEre rn_aud_final = 1
 ),
@@ -373,6 +381,8 @@ aud.ex3_unidade_preposto_label, --Unidade Preposto
 aud.formato_da_audiencia_label, --Formato da audiencia
 aud.ex3_situacao_da_audiencia_label, --Situação da audiencia
 aud.ex3_status_label, --Status da audiencia
+aud.ex3_advogado_audiencista, --Advogado audiencista
+aud.ex3_escritorio_credenciado --Escritorio credenciado
 FROM cadastro_unido_final as cad 
 LEFT JOIN final_aud as aud ON cad.ex3_numero_do_processo = aud.ex3_numero_do_processo
 ),
@@ -386,6 +396,8 @@ array_aud AS (
       CASE WHEN ex3_unidade_preposto_label IS NOT NULL THEN 1 ELSE 0 END,
       CASE WHEN formato_da_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
       CASE WHEN ex3_situacao_da_audiencia_label IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_advogado_audiencista IS NOT NULL THEN 1 ELSE 0 END,
+      CASE WHEN ex3_escritorio_credenciado IS NOT NULL THEN 1 ELSE 0 END,
       CASE WHEN ex3_status_label IS NOT NULL THEN 1 ELSE 0 END
       ]) AS array_campos_aud,
       name,
